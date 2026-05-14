@@ -1,0 +1,157 @@
+digraph CLI_Layer {
+  rankdir=TB;
+  label="GitNexus CLI Layer — Architecture & Internal Dependencies";
+  fontsize=16;
+  fontname="Consolas";
+  compound=true;
+  bgcolor="#1E1E2E";
+  fontcolor="#CDD6F4";
+  edge [fontname="Consolas", fontsize=9, color="#585B70"];
+  node [fontname="Consolas", fontsize=10, style="filled", shape="box"];
+
+  // Colors
+  // blue (#4A90D9) = CLI/entry
+  // purple (#9B59B6) = Storage
+  // orange (#F5A623) = Core/business
+  // gray (#95A5A6) = Infra/external
+
+  subgraph cluster_cli {
+    label="CLI Layer (src/cli/)";
+    fontsize=14;
+    fontcolor="#4A90D9";
+    style="filled";
+    color="#4A90D9";
+    fillcolor="#2A2A3E";
+
+    // Entry point
+    index [label="index.ts (entry)", fillcolor="#4A90D9", fontcolor="#FFFFFF", shape="diamond"];
+
+    // Commands (as per spec: analyze, index-repo, status, list, remove, clean, wiki, publish, setup, config)
+    analyze [label="analyze.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    index_repo [label="index-repo.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    status [label="status.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    list [label="list.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    remove [label="remove.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    clean [label="clean.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    wiki [label="wiki.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    publish [label="publish.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    setup [label="setup.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    serve [label="serve.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    tool_ [label="tool.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    mcp_ [label="mcp.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    eval_server [label="eval-server.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    group_ [label="group.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    augment [label="augment.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    doctor [label="doctor.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    skill_gen [label="skill-gen.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+    ai_context [label="ai-context.ts", fillcolor="#5BA3E6", fontcolor="#FFFFFF"];
+
+    // Helper utilities
+    cli_message [label="cli-message.ts", fillcolor="#6BAFE6", fontcolor="#FFFFFF", style="dashed"];
+    lazy_action [label="lazy-action.ts", fillcolor="#6BAFE6", fontcolor="#FFFFFF", style="dashed"];
+    optional_grammars [label="optional-grammars.ts", fillcolor="#6BAFE6", fontcolor="#FFFFFF", style="dashed"];
+
+    // Internal edges (CLI-internal imports)
+    index -> lazy_action [label="createLazyAction", color="#4A90D9"];
+    index -> group_ [label="registerGroupCommands", color="#4A90D9"];
+    analyze -> optional_grammars [label="warnMissingOptionalGrammars", color="#4A90D9"];
+    analyze -> cli_message [label="cliError", color="#4A90D9"];
+    eval_server -> cli_message [label="cliInfo, cliWarn", color="#4A90D9"];
+    publish -> cli_message [label="cliInfo, cliError", color="#4A90D9"];
+    remove -> cli_message [label="cliError", color="#4A90D9"];
+    serve -> cli_message [label="cliError", color="#4A90D9"];
+    tool_ -> cli_message [label="cliError", color="#4A90D9"];
+    optional_grammars -> cli_message [label="cliWarn", color="#4A90D9"];
+    ai_context -> skill_gen [label="GeneratedSkillInfo", color="#4A90D9"];
+  }
+
+  // External dependencies (from CLI to other layers)
+  // Core dependencies
+  analyze -> run_analyze [label="runFullAnalysis", color="#F5A623", style="dashed"];
+  analyze -> logger_core [label="logger", color="#F5A623", style="dashed"];
+  analyze -> close_lbug [label="closeLbug", color="#F5A623", style="dashed"];
+  analyze -> hf_env [label="isHfDownloadFailure", color="#F5A623", style="dashed"];
+  analyze -> max_file_size [label="getMaxFileSizeBannerMessage", color="#F5A623", style="dashed"];
+
+  augment -> augment_engine [label="augment", color="#F5A623", style="dashed"];
+  
+  clean -> logger_core [label="logger", color="#F5A623", style="dashed"];
+  remove -> logger_core [label="logger", color="#F5A623", style="dashed"];
+  group_ -> logger_core [label="logger", color="#F5A623", style="dashed"];
+  cli_message -> logger_core [label="logger", color="#F5A623", style="dashed"];
+  ai_context -> logger_core [label="logger", color="#F5A623", style="dashed"];
+  wiki -> logger_core [label="logger", color="#F5A623", style="dashed"];
+  serve -> logger_core [label="logger, flushLoggerSync", color="#F5A623", style="dashed"];
+  eval_server -> logger_core [label="logger", color="#F5A623", style="dashed"];
+
+  doctor -> resolve_embedding_config [label="resolveEmbeddingConfig", color="#F5A623", style="dashed"];
+  doctor -> is_http_mode [label="isHttpMode", color="#F5A623", style="dashed"];
+  doctor -> runtime_capabilities [label="getRuntimeCapabilities", color="#F5A623", style="dashed"];
+
+  setup -> get_version [label="getVersion", color="#F5A623", style="dashed"];
+  index -> get_version [label="getVersion", color="#F5A623", style="dashed"];
+
+  setup -> portability [label="getPortability", color="#F5A623", style="dashed"];
+  ai_context -> portability [label="getPortability", color="#F5A623", style="dashed"];
+  optional_grammars -> portability [label="getPortability", color="#F5A623", style="dashed"];
+
+  wiki -> wiki_generator [label="WikiGenerator, WikiOptions", color="#F5A623", style="dashed"];
+  wiki -> llm_client [label="resolveLLMConfig, LLMProvider", color="#F5A623", style="dashed"];
+  wiki -> cursor_client [label="detectCursorCLI", color="#F5A623", style="dashed"];
+
+  skill_gen -> pipeline_result [label="PipelineResult", color="#F5A623", style="dashed"];
+  skill_gen -> community_processor [label="CommunityNode", color="#F5A623", style="dashed"];
+  skill_gen -> process_processor [label="ProcessNode", color="#F5A623", style="dashed"];
+  skill_gen -> graph_types [label="KnowledgeGraph", color="#F5A623", style="dashed"];
+
+  // Storage dependencies
+  analyze -> repo_manager [label="(readRegistry, etc)", color="#9B59B6", style="dashed"];
+  analyze -> git_storage [label="getGitRoot, hasGitDir", color="#9B59B6", style="dashed"];
+  clean -> repo_manager [label="(cleanupOldKuzuFiles, etc)", color="#9B59B6", style="dashed"];
+  index_repo -> repo_manager [label="(registerRepo, etc)", color="#9B59B6", style="dashed"];
+  index_repo -> git_storage [label="getGitRoot, getRemoteUrl", color="#9B59B6", style="dashed"];
+  list -> repo_manager [label="listRegisteredRepos", color="#9B59B6", style="dashed"];
+  publish -> git_storage [label="getGitRoot, getRemoteOriginUrl", color="#9B59B6", style="dashed"];
+  publish -> repo_manager [label="hasIndex", color="#9B59B6", style="dashed"];
+  remove -> repo_manager [label="(unregisterRepo, etc)", color="#9B59B6", style="dashed"];
+  setup -> repo_manager [label="getGlobalDir", color="#9B59B6", style="dashed"];
+  status -> repo_manager [label="findRepo, getStoragePaths", color="#9B59B6", style="dashed"];
+  status -> git_storage [label="getCurrentCommit, isGitRepo", color="#9B59B6", style="dashed"];
+  wiki -> git_storage [label="getGitRoot, isGitRepo", color="#9B59B6", style="dashed"];
+  wiki -> repo_manager [label="(findRepo, etc)", color="#9B59B6", style="dashed"];
+
+  // Server / MCP dependencies
+  serve -> server_api [label="createServer", color="#50B86C", style="dashed"];
+  eval_server -> local_backend [label="LocalBackend", color="#50B86C", style="dashed"];
+  tool_ -> local_backend [label="LocalBackend", color="#50B86C", style="dashed"];
+  mcp_ -> stdio_context [label="installGlobalStdoutSentinel", color="#50B86C", style="dashed"];
+
+  // Generated / Infra dependencies
+  optional_grammars -> generated_constants [label="DEV_APP_ROOT_URL", color="#95A5A6", style="dashed"];
+
+  // Hidden external nodes
+  run_analyze [label="core/run-analyze.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  logger_core [label="core/logger.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  close_lbug [label="core/lbug/lbug-adapter.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  hf_env [label="core/embeddings/hf-env.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  max_file_size [label="core/ingestion/utils/max-file-size.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  augment_engine [label="core/augmentation/engine.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  resolve_embedding_config [label="core/embeddings/config.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  is_http_mode [label="core/embeddings/http-client.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  runtime_capabilities [label="core/platform/capabilities.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  get_version [label="core/environment.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  portability [label="core/portability/index.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  wiki_generator [label="core/wiki/generator.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  llm_client [label="core/wiki/llm-client.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  cursor_client [label="core/wiki/cursor-client.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  pipeline_result [label="types/pipeline.ts", color="#95A5A6", fontcolor="#FFFFFF"];
+  community_processor [label="core/ingestion/community-processor.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  process_processor [label="core/ingestion/process-processor.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  graph_types [label="core/graph/types.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  repo_manager [label="storage/repo-manager.ts", color="#9B59B6", fontcolor="#FFFFFF"];
+  git_storage [label="storage/git.ts", color="#9B59B6", fontcolor="#FFFFFF"];
+  server_api [label="server/api.ts", color="#50B86C", fontcolor="#FFFFFF"];
+  local_backend [label="mcp/local/local-backend.ts", color="#50B86C", fontcolor="#FFFFFF"];
+  stdio_context [label="mcp/stdio-context.ts", color="#50B86C", fontcolor="#FFFFFF"];
+  generated_constants [label="generated/constants.ts", color="#95A5A6", fontcolor="#FFFFFF"];
+}

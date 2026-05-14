@@ -1,0 +1,89 @@
+/**
+ * Pipeline orchestrator — dependency-ordered ingestion pipeline.
+ *
+ * The pipeline is composed of named phases with explicit dependencies.
+ * Each phase is defined in its own file under `pipeline-phases/`.
+ * The runner in `pipeline-phases/runner.ts` executes phases in
+ * topological order, passing typed outputs from upstream phases as
+ * inputs to downstream phases.
+ *
+ * To add a new phase:
+ * 1. Create a new file in `pipeline-phases/` following the pattern
+ * 2. Export it from `pipeline-phases/index.ts`
+ * 3. Add it to the `ALL_PHASES` array below
+ *
+ * See ARCHITECTURE.md for the full phase dependency diagram.
+ */
+import { createKnowledgeGraph } from '../graph/graph.js';
+import { runPipeline, getPhaseOutput, scanPhase, structurePhase, markdownPhase, cobolPhase, parsePhase, routesPhase, toolsPhase, ormPhase, crossFilePhase, scopeResolutionPhase, mroPhase, communitiesPhase, processesPhase, } from './pipeline-phases/index.js';
+// ── Phase registry ─────────────────────────────────────────────────────────
+/**
+ * All pipeline phases with their dependency relationships.
+ *
+ * Phase dependency graph:
+ *
+ *   scan → structure → [markdown, cobol] → parse → [routes, tools, orm]
+ *     → crossFile → mro → communities → processes
+ *
+ * To add a new phase: create a file in pipeline-phases/, export the phase
+ * object, and add it to the appropriate position in this array.
+ */
+function buildPhaseList(options) {
+    const phases = [
+        scanPhase,
+        structurePhase,
+        markdownPhase,
+        cobolPhase,
+        parsePhase,
+        routesPhase,
+        toolsPhase,
+        ormPhase,
+        crossFilePhase,
+        scopeResolutionPhase,
+    ];
+    if (!options?.skipGraphPhases) {
+        phases.push(mroPhase, communitiesPhase, processesPhase);
+    }
+    return phases;
+}
+// ── Pipeline orchestrator ─────────────────────────────────────────────────
+export const runPipelineFromRepo = async (repoPath, onProgress, options) => {
+    const graph = createKnowledgeGraph();
+    const pipelineStart = Date.now();
+    const phases = buildPhaseList(options);
+    const results = await runPipeline(phases, {
+        repoPath,
+        graph,
+        onProgress,
+        options,
+        pipelineStart,
+    });
+    // Extract final results for the PipelineResult contract
+    const { totalFiles, usedWorkerPool } = getPhaseOutput(results, 'parse');
+    let communityResult;
+    let processResult;
+    if (!options?.skipGraphPhases) {
+        communityResult = getPhaseOutput(results, 'communities').communityResult;
+        processResult = getPhaseOutput(results, 'processes').processResult;
+    }
+    onProgress({
+        phase: 'complete',
+        percent: 100,
+        message: communityResult && processResult
+            ? `Graph complete! ${communityResult.stats.totalCommunities} communities, ${processResult.stats.totalProcesses} processes detected.`
+            : 'Graph complete! (graph phases skipped)',
+        stats: {
+            filesProcessed: totalFiles,
+            totalFiles,
+            nodesCreated: graph.nodeCount,
+        },
+    });
+    return {
+        graph,
+        repoPath,
+        totalFileCount: totalFiles,
+        communityResult,
+        processResult,
+        usedWorkerPool,
+    };
+};

@@ -1,0 +1,178 @@
+%% Server Layer Request Lifecycle Diagram
+%% api.ts → middleware → routes → core/storage
+
+flowchart TB
+  subgraph SRV["Server Layer (src/server/)"]
+    style SRV fill:#F0FFF0,stroke:#50B86C
+
+    %% Entry
+    API(["api.ts (createServer)"]):::srvEntry
+
+    %% Middleware
+    subgraph MW["middleware/"]
+      style MW fill:#E8F8E8,stroke:#90C890
+      MW_INDEX["index.ts<br/>(mountMiddleware)"]:::mw
+      MW_CORS["cors.ts<br/>(isAllowedOrigin)"]:::mw
+      MW_RESOLVER["repo-resolver.ts<br/>(createRepoResolver/requestedRepo)"]:::mw
+      MW_ERR["error-handler.ts<br/>(statusFromError/globalErrorHandler)"]:::mw
+    end
+
+    %% Routes
+    subgraph ROUTES["routes/"]
+      style ROUTES fill:#E8F8E8,stroke:#90C890
+      R_INDEX["index.ts<br/>(mountAllRoutes)"]:::barrel
+      R_HEALTH["health.ts<br/>(mountHealth)"]:::srvRoute
+      R_REPOS["repos.ts<br/>(mountRepos)"]:::srvRoute
+      R_GRAPH["graph.ts<br/>(mountGraph)"]:::srvRoute
+      R_QUERY["query.ts<br/>(mountQuery)"]:::srvRoute
+      R_SEARCH["search.ts<br/>(mountSearch)"]:::srvRoute
+      R_FILE["file.ts<br/>(mountFile/handleFileRequest)"]:::srvRoute
+      R_PROC["processes.ts<br/>(mountProcesses)"]:::srvRoute
+      R_ANALYZE["analyze.ts<br/>(mountAnalyze)"]:::srvRoute
+      R_EMBED["embedding.ts<br/>(mountEmbedding)"]:::srvRoute
+    end
+
+    %% Helpers
+    subgraph HELPERS["helpers/"]
+      style HELPERS fill:#F0F0F0,stroke:#AAA
+      H_CFG["config.ts"]:::helper
+      H_TYPES["types.ts"]:::barrel
+      H_SHUT["shutdown.ts"]:::helper
+      H_VAL["validation.ts"]:::helper
+      H_STRM["streaming.ts"]:::helper
+      H_UI["web-ui.ts"]:::helper
+      H_MCP["mcp-http.ts"]:::helper
+      H_GIT["git-clone.ts"]:::helper
+      H_JOB["analyze-job.ts"]:::helper
+      H_WORKER["analyze-worker.ts<br/>(fork → runFullAnalysis)"]:::helper
+    end
+  end
+
+  subgraph CORE["Core Layer"]
+    style CORE fill:#FFF8E1,stroke:#E6A817
+    C_ENV["environment.ts"]:::core
+    C_LOG["logger.ts"]:::core
+    C_LBUG["lbug/lbug-adapter.ts<br/>(withLbugDb/executeQuery/…)"]:::core
+    C_POOL["lbug/pool-adapter.ts<br/>(isWriteQuery)"]:::core
+    C_PORT["portability/index.ts"]:::core
+    C_RUN["run-analyze.ts"]:::core
+    C_HYBRID["search/hybrid-search.ts"]:::core
+    C_BM25["search/bm25-index.ts"]:::core
+    C_EMBED["embeddings/embedding-pipeline.ts"]:::core
+  end
+
+  subgraph STO["Storage Layer"]
+    style STO fill:#F3E5F5,stroke:#7B1FA2
+    S_REPO["repo-manager.ts"]:::storage
+  end
+
+  subgraph MCP["MCP Layer"]
+    style MCP fill:#E8F5E9,stroke:#388E3C
+    M_LOCAL["local/local-backend.ts"]:::mcp
+    M_SRV["server.ts"]:::mcp
+  end
+
+  subgraph CFG["Config Layer"]
+    style CFG fill:#FCE4EC,stroke:#C62828
+    CFG_PORT["index.ts<br/>(loadPortableConfig)"]:::cfg
+  end
+
+  subgraph SHARED["gitnexus-shared"]
+    style SHARED fill:#E0F0FF,stroke:#2979FF
+    SH_NODES["NODE_TABLES/types"]:::shared
+  end
+
+  %% === Boot chain ===
+  API -->|"mountMiddleware"| MW_INDEX
+  API -->|"mountAllRoutes"| R_INDEX
+  API -->|"registerGracefulShutdown"| H_SHUT
+  API -->|"registerWebUI"| H_UI
+  API -->|"mountMCPEndpoints"| H_MCP
+  API -->|"globalErrorHandler"| MW_ERR
+  API -->|"LocalBackend"| M_LOCAL
+  API -->|"JobManager (×2)"| H_JOB
+
+  %% Middleware chain
+  MW_INDEX -->|"isAllowedOrigin"| MW_CORS
+  MW_INDEX -->|"express.json"| R_INDEX
+
+  %% Route barrel → individual
+  R_INDEX --> R_HEALTH
+  R_INDEX --> R_REPOS
+  R_INDEX --> R_GRAPH
+  R_INDEX --> R_QUERY
+  R_INDEX --> R_SEARCH
+  R_INDEX --> R_FILE
+  R_INDEX --> R_PROC
+  R_INDEX --> R_ANALYZE
+  R_INDEX --> R_EMBED
+
+  %% Route → Middleware (shared)
+  R_REPOS & R_GRAPH & R_QUERY & R_SEARCH & R_FILE & R_PROC & R_ANALYZE & R_EMBED -->|"createRepoResolver / requestedRepo"| MW_RESOLVER
+  R_REPOS & R_ANALYZE & R_EMBED -->|"createRepoLockManager"| MW_RESOLVER
+  R_FILE & R_PROC -->|"statusFromError"| MW_ERR
+
+  %% Route → Core (individual)
+  R_HEALTH -->|"getVersion"| C_ENV
+  R_GRAPH --->|"withLbugDb / executeQuery"| C_LBUG
+  R_QUERY --->|"withLbugDb / executeQuery"| C_LBUG
+  R_QUERY -->|"isWriteQuery"| C_POOL
+  R_SEARCH --->|"withLbugDb / executeQuery / executePrepared"| C_LBUG
+  R_SEARCH -->|"hybridSearch"| C_HYBRID
+  R_SEARCH -->|"searchFTSFromLbug"| C_BM25
+  R_SEARCH -.->|"(dynamic) semanticSearch"| C_EMBED
+  R_FILE -->|"withLbugDb / executeQuery"| C_LBUG
+  R_ANALYZE -->|"getPortability"| C_PORT
+  R_ANALYZE -->|"logger"| C_LOG
+  R_EMBED --->|"withLbugDb / executeQuery / flushWAL"| C_LBUG
+  R_EMBED -.->|"(dynamic) runEmbeddingPipeline"| C_EMBED
+
+  %% Route → Storage
+  R_REPOS -->|"listRegisteredRepos / loadMeta / getStoragePath"| S_REPO
+  R_ANALYZE -->|"getStoragePath"| S_REPO
+
+  %% Route → Shared
+  R_GRAPH & R_SEARCH -->|"NODE_TABLES / types"| SH_NODES
+
+  %% Route → Server helpers
+  R_ANALYZE & R_EMBED -->|"mountSSEProgress"| H_STRM
+  R_ANALYZE -->|"extractRepoName / getCloneDir / cloneOrPull"| H_GIT
+  R_ANALYZE -->|"createRouteLimiter"| H_VAL
+  R_EMBED -->|"createRouteLimiter"| H_VAL
+  R_FILE -->|"createRouteLimiter / assertString"| H_VAL
+  R_GRAPH -->|"streamGraphNdjson"| H_STRM
+
+  %% Route → MCP Backend
+  R_PROC -->|"backend.queryProcesses / …"| M_LOCAL
+
+  %% Helper → External
+  H_CFG -->|"loadPortableConfig"| CFG_PORT
+  H_SHUT -->|"closeLbug"| C_LBUG
+  H_SHUT -->|"logger"| C_LOG
+  H_STRM -->|"streamQuery"| C_LBUG
+  H_STRM -->|"NODE_TABLES"| SH_NODES
+  H_UI -->|"getPortability"| C_PORT
+  H_UI -->|"createRouteLimiter"| H_VAL
+  H_UI -->|"logger"| C_LOG
+  H_MCP -->|"createMCPServer"| M_SRV
+  H_MCP -->|"LocalBackend"| M_LOCAL
+  H_MCP -->|"logger"| C_LOG
+  H_GIT -->|"logger"| C_LOG
+  H_WORKER -->|"runFullAnalysis"| C_RUN
+  H_WORKER -->|"closeLbug"| C_LBUG
+  MW_RESOLVER -->|"listRegisteredRepos"| S_REPO
+  MW_RESOLVER -->|"logger"| C_LOG
+  MW_ERR -->|"BadRequestError"| H_VAL
+  MW_ERR -->|"logger"| C_LOG
+
+  %% Styling
+  classDef srvEntry fill:#50B86C,color:#fff,stroke:#2D8B4A
+  classDef srvRoute fill:#50B86C,color:#fff,stroke:#2D8B4A
+  classDef mw fill:#B8F0C4,color:#000,stroke:#70C880
+  classDef helper fill:#E0E0E0,color:#000,stroke:#AAA
+  classDef barrel fill:#E0E0E0,color:#000,stroke:#AAA,stroke-dasharray: 4 4
+  classDef core fill:#F5A623,color:#fff,stroke:#D4891A
+  classDef storage fill:#9B59B6,color:#fff,stroke:#7D3C98
+  classDef mcp fill:#66BB6A,color:#fff,stroke:#388E3C
+  classDef cfg fill:#EF5350,color:#fff,stroke:#C62828
+  classDef shared fill:#82B1FF,color:#fff,stroke:#2979FF

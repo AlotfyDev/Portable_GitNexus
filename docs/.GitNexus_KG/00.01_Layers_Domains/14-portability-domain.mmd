@@ -1,0 +1,58 @@
+%% GitNexus Portability Domain — core/portability/
+%% Colors: orange=Core, blue=CLI, green=Server, gray=Infra
+
+graph TB
+  subgraph PORT["Portability Domain (core/portability/)"]
+    style PORT fill:#2E2E1E,stroke:#F5A623,color:#CDD6F4
+
+    index_p("index.ts (barrel)"):::barrel
+    contract("contract.ts"):::core
+
+    contract_interface("PortabilityContract interface"):::iface
+    portable_impl("PortableContract"):::impl
+    dev_impl("DevContract"):::impl
+
+    contract -->|IS_PORTABLE_BUILD, DEV_APP_ROOT_URL| generated_constants_p("generated/constants.ts"):::infra
+    index_p -->|PortableContract, DevContract| contract
+    index_p -->|IS_PORTABLE_BUILD| generated_constants_p
+    contract_interface -.->|implements| portable_impl
+    contract_interface -.->|implements| dev_impl
+  end
+
+  subgraph CONSUMERS["Portability Consumers"]
+    style CONSUMERS fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+
+    cli_setup("cli/setup.ts"):::cli
+    cli_ai_context("cli/ai-context.ts"):::cli
+    cli_optional_grammars("cli/optional-grammars.ts"):::cli
+    cli_analyze("cli/analyze.ts"):::cli
+    server_analyze("server/routes/analyze.ts"):::server
+    embedder_p("core/embeddings/embedder.ts"):::core_emb
+    provider_p("core/embeddings/provider.ts"):::core_emb
+    community_processor_p("core/ingestion/community-processor.ts"):::core_ing
+    parse_impl_p("core/ingestion/pipeline-phases/parse-impl.ts"):::core_ing
+    config_emb_p("core/embeddings/config.ts"):::core_emb
+    run_analyze_p("core/run-analyze.ts"):::core_ing
+  end
+
+  cli_setup -.->|getPortability| index_p
+  cli_ai_context -.->|getPortability| index_p
+  cli_optional_grammars -.->|getPortability| index_p
+  cli_analyze -.->|getPortability| index_p
+  server_analyze -.->|getPortability| index_p
+  embedder_p -.->|getPortability| index_p
+  provider_p -.->|getPortability| index_p
+  community_processor_p -.->|getPortability| index_p
+  parse_impl_p -.->|getPortability| index_p
+  config_emb_p -.->|loadPortableConfig| index_p
+  run_analyze_p -.->|embedding mode| index_p
+
+  classDef barrel fill:#E8B84A,stroke:#F5A623,color:#FFFFFF,stroke-dasharray:5 5
+  classDef core fill:#D4A017,stroke:#F5A623,color:#FFFFFF
+  classDef iface fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+  classDef impl fill:#D4A017,stroke:#F5A623,color:#FFFFFF
+  classDef infra fill:#95A5A6,stroke:#95A5A6,color:#FFFFFF
+  classDef cli fill:#4A90D9,stroke:#4A90D9,color:#FFFFFF
+  classDef server fill:#50B86C,stroke:#50B86C,color:#FFFFFF
+  classDef core_emb fill:#E8B84A,stroke:#F5A623,color:#FFFFFF
+  classDef core_ing fill:#D4A017,stroke:#F5A623,color:#FFFFFF

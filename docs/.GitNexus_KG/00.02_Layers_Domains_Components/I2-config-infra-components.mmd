@@ -1,0 +1,90 @@
+%% Config Layer + lib + types + generated Architecture
+%% Config: gray (#95A5A6), lib/types: light gray (#BDC3C7), generated: silver
+
+flowchart TB
+  %% ─── Config Layer ──────────────────────────────────────────────────
+  subgraph Config["⚙️ Config Layer (src/config/)"]
+    direction TB
+    C_idx["index.ts (barrel)"]
+    C_types["types.ts\nPortableConfig"]
+    C_portable["portable-config.ts\nloadPortableConfig()\nresolveConfigPath()"]
+    C_ignore["ignore-service.ts\nshouldIgnorePath()\nloadIgnoreRules()\ncreateIgnoreFilter()"]
+    C_lang["supported-languages.ts"]
+
+    C_idx -.->|"re-export"| C_portable
+    C_idx -.->|"export type"| C_types
+  end
+
+  %% ─── Library ──────────────────────────────────────────────────────
+  subgraph Lib["📐 Library (src/lib/)"]
+    L_utils["utils.ts\ngenerateId(label, name)"]
+  end
+
+  %% ─── Types ────────────────────────────────────────────────────────
+  subgraph Types["📘 Types (src/types/)"]
+    T_pipeline["pipeline.ts\nPipelineResult"]
+  end
+
+  %% ─── Generated ────────────────────────────────────────────────────
+  subgraph Generated["🏗️ Generated Constants (src/generated/)"]
+    G_constants["constants.ts (auto-generated)\nGITNEXUS_VERSION='1.6.4'\nIS_PORTABLE_BUILD=false\nDEV_APP_ROOT_URL\nEMBEDDINGS_ENABLED=true"]
+  end
+
+  %% ─── Cross-layer: Config → Core ───────────────────────────────────
+  subgraph CoreConfig["⬇️ Config → Core (imports)"]
+    direction TB
+    CC_logger["core/logger.ts"]
+    CC_portability["core/portability/index.ts\ngetPortability()\nPortabilityContract"]
+  end
+
+  %% ─── Cross-layer: Types → Core ────────────────────────────────────
+  subgraph CoreTypes["⬇️ Types → Core (imports)"]
+    direction TB
+    CT_graph["core/graph/types.ts\nKnowledgeGraph"]
+    CT_community["core/ingestion/community-processor.ts\nCommunityDetectionResult"]
+    CT_process["core/ingestion/process-processor.ts\nProcessDetectionResult"]
+  end
+
+  %% ─── External ─────────────────────────────────────────────────────
+  subgraph External["📦 External npm Deps"]
+    E_jsyaml["js-yaml → load()"]
+    E_ignore["ignore package\n(path-scurry)"]
+    E_shared["gitnexus-shared\n→ SupportedLanguages"]
+  end
+
+  %% ─── Edges: Config internal ───────────────────────────────────────
+  C_portable -->|"imports"| C_types
+  C_portable -->|"imports PortableConfig"| C_types
+  C_ignore --> E_ignore
+
+  %% ─── Edges: Cross-layer ───────────────────────────────────────────
+  C_portable ==>|"imports getPortability()"| CC_portability
+  C_ignore ==>|"imports logger"| CC_logger
+  C_lang ==> E_shared
+
+  T_pipeline ==> CT_graph
+  T_pipeline ==> CT_community
+  T_pipeline ==> CT_process
+
+  %% ─── Edges: Generated consumers ────────────────────────────────────
+  CC_portability -->|"imports IS_PORTABLE_BUILD"| G_constants
+
+  %% ─── Edges: external ──────────────────────────────────────────────
+  C_portable -->|"imports load()"| E_jsyaml
+  C_ignore -->|"imports ignore package"| E_ignore
+
+  %% ─── Styling ──────────────────────────────────────────────────────
+  classDef config fill:#95A5A6,color:#fff,stroke:#7F8C8D
+  classDef lib fill:#BDC3C7,stroke:#95A5A6
+  classDef types fill:#BDC3C7,stroke:#95A5A6
+  classDef gen fill:#D5D8DC,stroke:#95A5A6
+  classDef core fill:#5DADE2,color:#fff,stroke:#2E86C1
+  classDef ext fill:#F1948A,stroke:#E74C3C
+  classDef crossEdge color:#5DADE2,stroke-width:2px
+
+  class C_idx,C_types,C_portable,C_ignore,C_lang config
+  class L_utils lib
+  class T_pipeline types
+  class G_constants gen
+  class CC_logger,CC_portability,CT_graph,CT_community,CT_process core
+  class E_jsyaml,E_ignore,E_shared ext

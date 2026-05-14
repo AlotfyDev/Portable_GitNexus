@@ -1,0 +1,293 @@
+digraph GitNexus_Holistic {
+  rankdir=TB;
+  splines=ortho;
+  compound=true;
+  pad=0.5;
+  fontsize=14;
+  fontname="Segoe UI";
+
+  // ── Color palette ──────────────────────────────────────────────────────
+  // blue   = CLI/entry       #D6EAF8
+  // green  = server/API      #D5F5E3
+  // orange = core/business   #FDEBD0
+  // purple = storage         #E8DAEF
+  // gray   = infra           #F2F3F4
+
+  // ── Subgraph: External / User ───────────────────────────────────────────
+  subgraph cluster_external {
+    label="External / User";
+    style=filled;
+    fillcolor="#F8F9FA";
+    color="#ADB5BD";
+    fontcolor="#495057";
+
+    User [label="User / AI Agent" shape=cylinder style=filled fillcolor="#F8F9FA" color="#ADB5BD"];
+    WebUI [label="Web UI (React/Vite)\ngitnexus-web/" shape=box3d style=filled fillcolor="#F8F9FA" color="#ADB5BD"];
+    Editor [label="Editor (Cursor, Claude)\nMCP Client" shape=box3d style=filled fillcolor="#F8F9FA" color="#ADB5BD"];
+  }
+
+  // ── Subgraph: CLI Layer ────────────────────────────────────────────────
+  subgraph cluster_cli {
+    label="CLI Layer (cli/)";
+    style=filled;
+    fillcolor="#D6EAF8";
+    color="#2980B9";
+    fontcolor="#1A5276";
+
+    CLI_Main [label="cli/index.ts\nCommander CLI" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Analyze [label="cli/analyze.ts\nanalyze --embeddings" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Serve [label="cli/serve.ts\nserve --port 4747" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_MCP [label="cli/mcp.ts\nMCP stdio server" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Tool [label="cli/tool.ts\nquery / context / impact" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Wiki [label="cli/wiki.ts\nwiki generation" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Setup [label="cli/setup.ts\nMCP config" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_List [label="cli/list.ts\nlist repos" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Doctor [label="cli/doctor.ts\nplatform diag" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Group [label="cli/group.ts\ngroup commands" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Clean [label="cli/clean.ts\nclean index" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Remove [label="cli/remove.ts\nremove repo" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Publish [label="cli/publish.ts\nnotify registry" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Status [label="cli/status.ts\nindex status" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Augment [label="cli/augment.ts\naugment pattern" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Eval [label="cli/eval-server.ts\nSWE-bench eval" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Skill [label="cli/skill-gen.ts\nskill generation" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_AI_Context [label="cli/ai-context.ts\nAI context files" shape=box style=filled fillcolor="#AED6F1"];
+    CLI_Lazy [label="cli/lazy-action.ts\nlazy import wrapper" shape=box style=filled fillcolor="#D4E6F1"];
+  }
+
+  // ── Subgraph: Server Layer ─────────────────────────────────────────────
+  subgraph cluster_server {
+    label="Server Layer (server/)";
+    style=filled;
+    fillcolor="#D5F5E3";
+    color="#27AE60";
+    fontcolor="#1E8449";
+
+    SVR_API [label="server/api.ts\nExpress app" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_Routes [label="server/routes/\nanalyze / embedding / file\n graph / health / processes\n query / repos / search" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_Middleware [label="server/middleware/\ncors / error-handler\n repo-resolver" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_JobMgr [label="server/analyze-job.ts\nJobManager" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_Worker [label="server/analyze-worker.ts\nanalyze worker" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_Stream [label="server/streaming.ts\nSSE + progress" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_Clone [label="server/git-clone.ts\ngit clone/pull" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_MCP_HTTP [label="server/mcp-http.ts\nMCP over HTTP" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_WebUI [label="server/web-ui.ts\nstatic file serve" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_Shutdown [label="server/shutdown.ts\ngraceful shutdown" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_Config [label="server/config.ts\nserver defaults" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_Types [label="server/types.ts\ntype defs" shape=box style=filled fillcolor="#A9DFBF"];
+    SVR_Valid [label="server/validation.ts\ninput validation" shape=box style=filled fillcolor="#A9DFBF"];
+  }
+
+  // ── Subgraph: MCP Layer ───────────────────────────────────────────────
+  subgraph cluster_mcp {
+    label="MCP Protocol Layer (mcp/)";
+    style=filled;
+    fillcolor="#D5F5E3";
+    color="#27AE60";
+    fontcolor="#1E8449";
+
+    MCP_Server [label="mcp/server.ts\nMCP Server (stdio)" shape=box style=filled fillcolor="#A9DFBF"];
+    MCP_Tools [label="mcp/tools.ts\ntool definitions" shape=box style=filled fillcolor="#A9DFBF"];
+    MCP_Resources [label="mcp/resources.ts\nresource definitions" shape=box style=filled fillcolor="#A9DFBF"];
+    MCP_Transport [label="mcp/compatible-stdio-transport.ts\nstdio transport" shape=box style=filled fillcolor="#A9DFBF"];
+    MCP_StdioCtx [label="mcp/stdio-context.ts\nstdout sentinel" shape=box style=filled fillcolor="#A9DFBF"];
+    MCP_Staleness [label="mcp/staleness.ts\nstaleness check" shape=box style=filled fillcolor="#A9DFBF"];
+    MCP_Local [label="mcp/local/local-backend.ts\nLocalBackend" shape=box style=filled fillcolor="#A9DFBF"];
+    MCP_LocalHelpers [label="mcp/local/helpers/\napi-tools / constants\ncontext-tools / detect-changes\ngraph-queries / group / impact\nlogging / rename / search\nstate-manager / symbol-resolution\ntool-dispatch / types" shape=box style=filled fillcolor="#A9DFBF"];
+    MCP_Core [label="mcp/core/\nembedder.ts [deprecated]\nlbug-adapter.ts [deprecated]" shape=box style=filled fillcolor="#D5F5E3" color="#999"];
+  }
+
+  // ── Subgraph: Core Business Logic ─────────────────────────────────────
+  subgraph cluster_core {
+    label="Core Business Logic (core/)";
+    style=filled;
+    fillcolor="#FDEBD0";
+    color="#E67E22";
+    fontcolor="#CA6F1E";
+
+    // Core root files
+    Core_Logger [label="core/logger.ts\nPino logger" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_Env [label="core/environment.ts\nversion info" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_EmbedMode [label="core/embedding-mode.ts\nembedding mode" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_GitStale [label="core/git-staleness.ts\nstaleness check" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Pipeline subsystem
+    Core_RunAnalyze [label="core/run-analyze.ts\nAnalyze orchestrator\nPipeline → LBug → FTS → Embeddings → Finalize" shape=box style=filled fillcolor="#F5CBA7" penwidth=2];
+
+    // Ingestion pipeline
+    Core_Ingestion [label="core/ingestion/pipeline.ts\nPipeline orchestrator" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_Ingestion_Phases [label="core/ingestion/pipeline-phases/\nscan → structure → [markdown, cobol] →\nparse → [routes, tools, orm] →\ncrossFile → scopeResolution →\n[mro → communities → processes]" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_Ingestion_Walker [label="core/ingestion/filesystem-walker.ts\nfile tree walker" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_Ingestion_Lang [label="core/ingestion/languages/\n14 language providers" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_Ingestion_Scopes [label="core/ingestion/scope-extractor/\nscope-extractor.ts\nscope-resolution/" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_Ingestion_Workers [label="core/ingestion/workers/\nparse-worker / worker-pool" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_Ingestion_Cobol [label="core/ingestion/cobol/\nCOBOL preprocessor" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_Ingestion_Extractors [label="core/ingestion/{call,class,field,heritage,\nmethod,route,type,variable}-extractors/\nLanguage-specific extractors" shape=box style=filled fillcolor="#F5CBA7"];
+    Core_Ingestion_Model [label="core/ingestion/model/\nsemantic model, symbol table\nheritage map, resolution context" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Embeddings
+    Core_Embeddings [label="core/embeddings/\nchunker / embedder / pipeline\nprovider / cache-loader\ncharacter-chunk / structural-extractor\nexact-search / hf-env / http-client\nserver-mapping / text-generator" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Graph
+    Core_Graph [label="core/graph/graph.ts\nKnowledgeGraph\nin-memory graph" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Group
+    Core_Group [label="core/group/\nservice / matching / sync\ncross-impact / bridge-db\ncontract-extractor / normalization\ngroup-path-utils / resolve-at-member\nmulti-repo group support" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // LadybugDB
+    Core_LBug [label="core/lbug/\nlbug-adapter / pool-adapter\nrepository / schema\ncsv-generator / extension-loader\nlbug-config" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Portability
+    Core_Port [label="core/portability/contract.ts\nPortableContract / DevContract\nisPortable / hasNativeAddons" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Search
+    Core_Search [label="core/search/\nbm25-index / fts-indexes\nhybrid-search / phase-timer" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Sidecar
+    Core_Sidecar [label="core/sidecar/\nmanager / ladybug-adapter\nnative sidecar wrapper" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Tree-sitter
+    Core_TreeSitter [label="core/tree-sitter/\nparser-loader / wasm-bridge\n13 WASM grammar bundles" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Vector store
+    Core_VecStore [label="core/vector-store/\nprovider / registry\nicm-provider / ladybug-provider" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Wiki
+    Core_Wiki [label="core/wiki/\ngenerator / html-viewer\nllm-client / prompts\ngraph-queries / cursor-client" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Platform capabilities
+    Core_Platform [label="core/platform/capabilities.ts\nAVX, FMA, threads, WASM" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Augmentation
+    Core_Augment [label="core/augmentation/engine.ts\naugment context" shape=box style=filled fillcolor="#F5CBA7"];
+
+    // Analyze helpers
+    Core_Analyze [label="core/analyze/\nfinalizer.ts / phases.ts / types.ts" shape=box style=filled fillcolor="#F5CBA7"];
+  }
+
+  // ── Subgraph: Storage Layer ────────────────────────────────────────────
+  subgraph cluster_storage {
+    label="Storage Layer (storage/)";
+    style=filled;
+    fillcolor="#E8DAEF";
+    color="#8E44AD";
+    fontcolor="#6C3483";
+
+    STOR_RepoMgr [label="storage/repo-manager.ts\nrepo registration\npath resolution\nmeta read/write" shape=box style=filled fillcolor="#D2B4DE"];
+    STOR_RepoMgrDir [label="storage/repo-manager/\nconfig / constants / errors\nfinalization / gitignore\nmeta / paths / types\nregistry/index.ts" shape=box style=filled fillcolor="#D2B4DE"];
+    STOR_Git [label="storage/git.ts\ngit operations\ncommit hash, remote" shape=box style=filled fillcolor="#D2B4DE"];
+  }
+
+  // ── Subgraph: Infrastructure Layers ────────────────────────────────────
+  subgraph cluster_infra {
+    label="Infrastructure (config/, lib/, types/, generated/)";
+    style=filled;
+    fillcolor="#F2F3F4";
+    color="#7F8C8D";
+    fontcolor="#515A5A";
+
+    INFRA_Config [label="config/\nindex.ts / portable-config.ts\nignore-service.ts\nsupported-languages.ts\ntypes.ts" shape=box style=filled fillcolor="#D5D8DC"];
+    INFRA_Lib [label="lib/utils.ts\ngenerateId utility" shape=box style=filled fillcolor="#D5D8DC"];
+    INFRA_Types [label="types/pipeline.ts\nPipelineResult" shape=box style=filled fillcolor="#D5D8DC"];
+    INFRA_Generated [label="generated/constants.ts\nIS_PORTABLE_BUILD\nGITNEXUS_VERSION\nDEV_APP_ROOT_URL\nEMBEDDINGS_ENABLED" shape=box style=filled fillcolor="#D5D8DC"];
+
+    // Portable bootstrap
+    PORT_Boot [label="portable-bootstrap.ts\nBun-compile entry\nNODE_PATH setup" shape=box style=filled fillcolor="#D5D8DC" shape=folder];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EDGES — based on actual import analysis
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // External → Entry points
+  User -> CLI_Main [label="npx gitnexus <cmd>" fontsize=10];
+  User -> SVR_API [label="HTTP :4747/api/*" fontsize=10];
+  Editor -> MCP_Server [label="MCP stdio protocol" fontsize=10];
+  WebUI -> SVR_API [label="HTTP GET /api/*" fontsize=10];
+
+  // CLI imports
+  CLI_Main -> CLI_Lazy [label="lazy import" fontsize=9];
+  CLI_Main -> CLI_Group [label="registerGroupCommands" fontsize=9];
+  CLI_Main -> Core_Env [label="getVersion" fontsize=9];
+  CLI_Analyze -> Core_RunAnalyze [label="runFullAnalysis" fontsize=9];
+  CLI_Analyze -> STOR_RepoMgr [label="getStoragePaths, getGlobalRegistryPath" fontsize=9];
+  CLI_Analyze -> STOR_Git [label="getGitRoot, hasGitDir" fontsize=9];
+  CLI_Analyze -> Core_LBug [label="closeLbug" fontsize=9];
+  CLI_Analyze -> Core_Embeddings [label="isHfDownloadFailure" fontsize=9];
+  CLI_Wiki -> Core_Wiki [label="wiki generation" fontsize=9 style=dashed];
+  CLI_Tool -> MCP_Local [label="LocalBackend direct" fontsize=9];
+  CLI_Serve -> SVR_API [label="createServer" fontsize=9];
+  CLI_MCP -> MCP_Server [label="startMCPServer" fontsize=9];
+  CLI_Setup -> MCP_Server [label="MCP config" fontsize=9 style=dashed];
+  CLI_Skill -> Core_Ingestion [label="pipelineResult" fontsize=9 style=dashed];
+  CLI_AI_Context -> STOR_RepoMgr [label="storage paths" fontsize=9 style=dashed];
+
+  // Server imports
+  SVR_API -> MCP_Local [label="LocalBackend" fontsize=9];
+  SVR_API -> MCP_Server [label="createMCPServer" fontsize=9];
+  SVR_API -> SVR_Routes [label="mountAllRoutes" fontsize=9];
+  SVR_API -> SVR_Middleware [label="mountMiddleware" fontsize=9];
+  SVR_API -> SVR_JobMgr [label="JobManager" fontsize=9];
+  SVR_Routes -> Core_RunAnalyze [label="analyze route" fontsize=9];
+  SVR_Routes -> Core_LBug [label="lbug queries" fontsize=9];
+  SVR_Routes -> Core_Search [label="hybridSearch, bm25" fontsize=9];
+  SVR_Routes -> Core_Graph [label="graph access" fontsize=9 style=dashed];
+  SVR_Routes -> MCP_Local [label="LocalBackend calls" fontsize=9];
+  SVR_Routes -> STOR_RepoMgr [label="meta, registry" fontsize=9];
+  SVR_Routes -> Core_Env [label="getVersion" fontsize=9];
+  SVR_Routes -> Core_Port [label="getPortability" fontsize=9];
+  SVR_Worker -> Core_RunAnalyze [label="runFullAnalysis" fontsize=9];
+  SVR_MCP_HTTP -> MCP_Server [label="MCP over HTTP" fontsize=9];
+  SVR_Middleware -> STOR_RepoMgr [label="repo resolver" fontsize=9 style=dashed];
+  SVR_Clone -> STOR_Git [label="clone/pull" fontsize=9 style=dashed];
+
+  // MCP imports
+  MCP_Server -> MCP_Tools [label="GITNEXUS_TOOLS" fontsize=9];
+  MCP_Server -> MCP_Resources [label="resource defs" fontsize=9];
+  MCP_Server -> MCP_Transport [label="stdio transport" fontsize=9];
+  MCP_Server -> MCP_StdioCtx [label="stdout sentinel" fontsize=9];
+  MCP_Server -> MCP_Local [label="LocalBackend" fontsize=9];
+  MCP_Server -> Core_Env [label="getVersion" fontsize=9];
+  MCP_Local -> MCP_LocalHelpers [label="tool dispatch" fontsize=9];
+  MCP_Local -> Core_LBug [label="lbug pool adapter" fontsize=9];
+  MCP_Local -> Core_Group [label="GroupService" fontsize=9];
+  MCP_Local -> Core_Embeddings [label="exact search\ncollectBestChunks" fontsize=9];
+  MCP_Local -> Core_Platform [label="capabilities" fontsize=9];
+  MCP_Local -> Core_Search [label="PhaseTimer" fontsize=9];
+  MCP_Local -> Core_Port [label="getPortability" fontsize=9];
+  MCP_Local -> STOR_RepoMgr [label="listRegisteredRepos" fontsize=9];
+  MCP_Local -> STOR_Git [label="parseDiffHunks" fontsize=9];
+  MCP_Local -> Core_Env [label="getVersion" fontsize=9];
+  MCP_Local -> INFRA_Config [label="loadPortableConfig" fontsize=9];
+
+  // Core → Storage
+  Core_RunAnalyze -> STOR_RepoMgr [label="getStoragePaths\nsaveMeta, registerRepo" fontsize=9];
+  Core_RunAnalyze -> STOR_Git [label="getCurrentCommit\nhasGitDir" fontsize=9];
+  Core_Group -> STOR_RepoMgr [label="listRegisteredRepos\nreadRegistry" fontsize=9];
+  Core_Group -> STOR_Git [label="getRemoteUrl" fontsize=9 style=dashed];
+  Core_Ingestion -> INFRA_Config [label="createIgnoreFilter\nloadIgnoreRules\nshouldIgnorePath" fontsize=9];
+  Core_Ingestion -> INFRA_Generated [label="IS_PORTABLE_BUILD\nDEV_APP_ROOT_URL" fontsize=9];
+  Core_Ingestion -> INFRA_Lib [label="generateId" fontsize=9];
+  Core_Ingestion -> MCP_StdioCtx [label="getActiveStdoutWrite" fontsize=9 style=dashed];
+  Core_Ingestion -> Core_TreeSitter [label="parser-loader" fontsize=9];
+  Core_Embeddings -> Core_Platform [label="defaultEmbeddingThreads" fontsize=9];
+
+  // Core → Portability
+  Core_Port -> INFRA_Generated [label="IS_PORTABLE_BUILD" fontsize=9];
+  INFRA_Config -> Core_Port [label="getPortability" fontsize=9];
+
+  // Core internal
+  Core_RunAnalyze -> Core_Analyze [label="finalizer.ts\nphases.ts" fontsize=9];
+  Core_RunAnalyze -> Core_Embeddings [label="cache-loader\nembedding-pipeline" fontsize=9];
+  Core_RunAnalyze -> Core_Ingestion [label="runPipelineFromRepo" fontsize=9];
+  Core_RunAnalyze -> Core_LBug [label="init/load/close" fontsize=9];
+  Core_RunAnalyze -> Core_Search [label="fts-indexes" fontsize=9];
+  Core_RunAnalyze -> Core_EmbedMode [label="deriveEmbeddingMode" fontsize=9];
+  Core_Ingestion -> Core_Graph [label="createKnowledgeGraph" fontsize=9];
+
+  // LadybugDB internal
+  Core_LBug -> Core_Search [label="fts queries" fontsize=9 style=dashed];
+
+  // Types → Core
+  INFRA_Types -> Core_Ingestion [label="PipelineResult types" fontsize=9 style=dashed];
+}

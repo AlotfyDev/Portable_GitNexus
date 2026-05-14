@@ -1,0 +1,76 @@
+%% GitNexus Storage Layer — Architecture & Internal Dependencies
+%% Colors: purple=Storage, blue=CLI, green=Server, orange=Core
+
+graph TB
+  subgraph STORE["Storage Layer (src/storage/)"]
+    style STORE fill:#2E1E2E,stroke:#9B59B6,color:#CDD6F4
+
+    repo_manager_barrel("repo-manager.ts (barrel)"):::entry
+    git("git.ts"):::corefile
+
+    subgraph RM["repo-manager/ (9 files)"]
+      style RM fill:#2E1E2E,stroke:#4A2E4A,color:#CDD6F4
+
+      paths("paths.ts"):::rmfile
+      meta("meta.ts"):::rmfile
+      registry("registry/index.ts"):::rmfile
+      config_rm("config.ts"):::rmfile
+      constants_rm("constants.ts"):::barrel
+      types_rm("types.ts"):::barrel
+      errors("errors.ts"):::rmfile
+      gitignore("gitignore.ts"):::rmfile
+      finalization("finalization.ts"):::rmfile
+    end
+
+    repo_manager_barrel -->|getInferredRepoName, resolveRepoIdentityRoot| git
+    repo_manager_barrel -->|interface types| types_rm
+    repo_manager_barrel -->|GITNEXUS_DIR| constants_rm
+    repo_manager_barrel -->|RegistryNameCollisionError| errors
+    repo_manager_barrel -->|canonicalizePath, getStoragePaths| paths
+    repo_manager_barrel -->|readRegistry, writeRegistry| registry
+    repo_manager_barrel -->|saveMeta, loadMeta| meta
+    repo_manager_barrel -->|CLIConfig| config_rm
+    repo_manager_barrel -->|ensureGitNexusIgnored| gitignore
+    repo_manager_barrel -->|cleanupOldKuzuFiles, etc| finalization
+    config_rm -->|CLIConfig| types_rm
+    config_rm -->|getGlobalDir, getGlobalConfigPath| paths
+    errors -->|RegistryEntry| types_rm
+    finalization -->|getStoragePaths, canonicalizePath| paths
+    finalization -->|AnalysisNotFinalizedError| errors
+    finalization -->|readRegistry| registry
+    gitignore -->|GITNEXUS_DIR, GITNEXUS_EXCLUDE_ENTRY| constants_rm
+    gitignore -->|getStoragePath| paths
+    meta -->|RepoMeta, IndexedRepo| types_rm
+    meta -->|getStoragePaths| paths
+    paths -->|GITNEXUS_DIR| constants_rm
+  end
+
+  subgraph CONSUMERS_ST["Key Storage Consumers"]
+    style CONSUMERS_ST fill:#2E1E2E,stroke:#4A2E4A,color:#CDD6F4
+
+    analyze_cli("cli/analyze.ts"):::cli
+    run_analyze_s("core/run-analyze.ts"):::core
+    finalizer_s("core/analyze/finalizer.ts"):::core
+    state_manager_s("mcp/local/helpers/state-manager.ts"):::mcp
+    repo_resolver_s("server/middleware/repo-resolver.ts"):::server
+    repos_route_s("server/routes/repos.ts"):::server
+  end
+
+  analyze_cli -.->|registerRepo, etc| repo_manager_barrel
+  analyze_cli -.->|getGitRoot, hasGitDir| git
+  run_analyze_s -.->|repo-manager barrel| repo_manager_barrel
+  run_analyze_s -.->|git storage| git
+  finalizer_s -.->|saveMeta, registerRepo| repo_manager_barrel
+  finalizer_s -.->|getRemoteUrl, hasGitDir| git
+  state_manager_s -.->|listRegisteredRepos, cleanupOldKuzuFiles| repo_manager_barrel
+  repo_resolver_s -.->|listRegisteredRepos| repo_manager_barrel
+  repos_route_s -.->|listRegisteredRepos, loadMeta| repo_manager_barrel
+
+  classDef entry fill:#9B59B6,stroke:#9B59B6,color:#FFFFFF
+  classDef corefile fill:#B07CC6,stroke:#9B59B6,color:#FFFFFF
+  classDef barrel fill:#B07CC6,stroke:#9B59B6,color:#FFFFFF,stroke-dasharray:5 5
+  classDef rmfile fill:#B07CC6,stroke:#9B59B6,color:#FFFFFF
+  classDef cli fill:#4A90D9,stroke:#4A90D9,color:#FFFFFF
+  classDef core fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+  classDef mcp fill:#50B86C,stroke:#50B86C,color:#FFFFFF
+  classDef server fill:#50B86C,stroke:#50B86C,color:#FFFFFF

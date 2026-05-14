@@ -1,0 +1,305 @@
+digraph MCP_Components {
+  rankdir=TB;
+  compound=true;
+  splines=ortho;
+  newrank=true;
+  fontname="Consolas";
+  fontsize=11;
+  label="GitNexus MCP Layer — Component Dependency Graph";
+  labeljust=l;
+  pad=0.5;
+  nodesep=0.4;
+  ranksep=0.6;
+
+  // ── Color Palette ──
+  // teal    (#1ABC9C) = MCP entry/barrel
+  // lightteal (#A3E4D7) = MCP helpers
+  // darkteal (#0E6655) = MCP protocol
+  // orange  (#F5A623) = Core dependencies
+  // purple  (#9B59B6) = Storage dependencies
+  // gray    (#95A5A6) = External packages
+  // white   (#FFFFFF) = stdlib
+
+  // ── Node defaults ──
+  node [shape=box, style=filled, fillcolor=white, fontname="Consolas", fontsize=10];
+
+  // ===================================================================
+  // MCP LOCAL LAYER
+  // ===================================================================
+
+  subgraph cluster_local {
+    label="local/ (Backend Layer)";
+    style=filled;
+    fillcolor="#F8FBFF";
+    fontname="Consolas";
+    fontsize=12;
+    color="#1ABC9C";
+    fontcolor="#1ABC9C";
+
+    // --- Barrel ---
+    local_backend [label="local/local-backend.ts\n(barrel / LocalBackend)", fillcolor="#1ABC9C", fontcolor=white, style="dashed,rounded", penwidth=2];
+
+    // --- Helpers subgraph ---
+    subgraph cluster_helpers {
+      label="helpers/";
+      style=filled;
+      fillcolor="#F0FAF8";
+      color="#A3E4D7";
+      fontcolor="#0E6655";
+      fontname="Consolas";
+      fontsize=11;
+
+      tool_dispatch [label="tool-dispatch.ts\n(dispatchTool)", fillcolor="#A3E4D7"];
+      state_manager [label="state-manager.ts\n(StateManager)", fillcolor="#A3E4D7"];
+      types_h [label="types.ts\n(RepoHandle, CodebaseContext)", fillcolor="#A3E4D7"];
+      search [label="search.ts\n(executeQueryTool, bm25Search)", fillcolor="#A3E4D7"];
+      context_tools [label="context-tools.ts\n(executeContext, executeCypher)", fillcolor="#A3E4D7"];
+      graph_queries [label="graph-queries.ts\n(queryClusters, getProcesses)", fillcolor="#A3E4D7"];
+      group [label="group.ts\n(dispatchGroupTool, group resources)", fillcolor="#A3E4D7"];
+      api_tools [label="api-tools.ts\n(routeMap, shapeCheck, apiImpact)", fillcolor="#A3E4D7"];
+      impact [label="impact.ts\n(executeImpact, BFS traversal)", fillcolor="#A3E4D7"];
+      detect_changes [label="detect-changes.ts\n(executeDetectChanges)", fillcolor="#A3E4D7"];
+      rename [label="rename.ts\n(executeRename)", fillcolor="#A3E4D7"];
+      symbol_resolution [label="symbol-resolution.ts\n(resolveSymbolCandidates)", fillcolor="#A3E4D7"];
+      logging [label="logging.ts\n(logQueryError, logQueryTiming)", fillcolor="#A3E4D7"];
+      constants [label="constants.ts\n(VALID_NODE_LABELS, isTestFilePath)", fillcolor="#A3E4D7"];
+    }
+  }
+
+  // ===================================================================
+  // MCP PROTOCOL LAYER
+  // ===================================================================
+
+  subgraph cluster_protocol {
+    label="mcp/ (Protocol Layer)";
+    style=filled;
+    fillcolor="#F5FBF8";
+    color="#0E6655";
+    fontname="Consolas";
+    fontsize=12;
+    fontcolor="#0E6655";
+
+    server [label="server.ts\n(createMCPServer, startMCPServer)", fillcolor="#0E6655", fontcolor=white];
+    tools [label="tools.ts\n(GITNEXUS_TOOLS definitions)", fillcolor="#0E6655", fontcolor=white];
+    resources [label="resources.ts\n(getResourceDefinitions, readResource)", fillcolor="#0E6655", fontcolor=white];
+    staleness [label="staleness.ts\n(re-export checkStaleness)", fillcolor="#0E6655", fontcolor=white];
+    stdio_context [label="stdio-context.ts\n(withMcpWrite, stdout sentinel)", fillcolor="#0E6655", fontcolor=white];
+    stdio_capture [label="stdio-capture.ts\n(realStdoutWrite, leaf module)", fillcolor="#0E6655", fontcolor=white];
+    compatible_transport [label="compatible-stdio-transport.ts\n(CompatibleStdioServerTransport)", fillcolor="#0E6655", fontcolor=white];
+    mcp_embedder [label="core/embedder.ts\n(embedQuery, initEmbedder)", fillcolor="#0E6655", fontcolor=white];
+    mcp_lbug_adapter [label="core/lbug-adapter.ts\n(re-export pool-adapter)", fillcolor="#0E6655", fontcolor=white];
+  }
+
+  // ===================================================================
+  // EXTERNAL DEPENDENCIES
+  // ===================================================================
+
+  node [shape=box3d];
+
+  // --- Core Dependencies (orange) ---
+  subgraph cluster_core {
+    label="core/";
+    style=filled;
+    fillcolor="#FEF5E7";
+    color="#F5A623";
+    fontname="Consolas";
+    fontsize=12;
+    fontcolor="#F5A623";
+
+    core_pool_adapter [label="lbug/pool-adapter\n(executeQuery, initLbug, etc.)", fillcolor="#F5A623"];
+    core_lbug_config [label="lbug/lbug-config\n(isWalCorruptionError)", fillcolor="#F5A623"];
+    core_lbug_schema [label="lbug/schema\n(EMBEDDING_TABLE_NAME)", fillcolor="#F5A623"];
+    core_logger [label="logger", fillcolor="#F5A623"];
+    core_environment [label="environment\n(getVersion)", fillcolor="#F5A623"];
+    core_git_staleness [label="git-staleness\n(checkStaleness)", fillcolor="#F5A623"];
+    core_group_service [label="group/service\n(GroupService)", fillcolor="#F5A623"];
+    core_group_resolve [label="group/resolve-at-member\n(resolveAtGroupMember)", fillcolor="#F5A623"];
+    core_embeddings_types [label="embeddings/types\n(collectBestChunks)", fillcolor="#F5A623"];
+    core_embeddings_exact [label="embeddings/exact-search\n(rankExactEmbeddingRows)", fillcolor="#F5A623"];
+    core_embeddings_config [label="embeddings/config\n(resolveEmbeddingConfig)", fillcolor="#F5A623"];
+    core_embeddings_hfenv [label="embeddings/hf-env\n(HF env overrides)", fillcolor="#F5A623"];
+    core_embeddings_http [label="embeddings/http-client\n(httpEmbedQuery)", fillcolor="#F5A623"];
+    core_search_phasetimer [label="search/phase-timer\n(PhaseTimer)", fillcolor="#F5A623"];
+    core_search_bm25 [label="search/bm25-index\n(searchFTSFromLbug)", fillcolor="#F5A623"];
+    core_platform_cap [label="platform/capabilities\n(vector extension check)", fillcolor="#F5A623"];
+  }
+
+  // --- Storage Dependencies (purple) ---
+  subgraph cluster_storage {
+    label="storage/";
+    style=filled;
+    fillcolor="#F4ECF7";
+    color="#9B59B6";
+    fontname="Consolas";
+    fontsize=12;
+    fontcolor="#9B59B6";
+
+    storage_repo_manager [label="repo-manager\n(listRegisteredRepos, RegistryEntry)", fillcolor="#9B59B6", fontcolor=white];
+    storage_git [label="git\n(parseDiffHunks)", fillcolor="#9B59B6", fontcolor=white];
+  }
+
+  // --- External packages (gray) ---
+  node [fillcolor="#95A5A6", fontcolor=white];
+  ext_mcp_sdk [label="@modelcontextprotocol/sdk"];
+  ext_transformers [label="@huggingface/transformers"];
+
+  // --- stdlib (white) ---
+  node [shape=cylinder, fillcolor=white, fontcolor=black];
+  stdlib_async_hooks [label="node:async_hooks"];
+  stdlib_process [label="node:process"];
+  stdlib_fs [label="node:fs (rename.ts, state-manager.ts)"];
+
+  // ===================================================================
+  // EDGES: MCP LOCAL LAYER
+  // ===================================================================
+
+  edge [style=solid, penwidth=1.2, fontname="Consolas", fontsize=8];
+
+  // --- 1. Barrel → Helpers (from local-backend.ts) ---
+  local_backend -> state_manager [label="StateManager"];
+  local_backend -> tool_dispatch [label="dispatchTool"];
+  local_backend -> context_tools [label="executeCypher, formatCypherAsMarkdown", fontsize=7];
+  local_backend -> impact [label="executeImpactByUid, executeImpact", fontsize=7];
+  local_backend -> graph_queries [label="queryClusters, queryProcesses, ...", fontsize=7];
+  local_backend -> group [label="readGroupContractsResource, readGroupStatusResource", fontsize=7];
+  local_backend -> types_h [label="RepoHandle (type ref)", style=dotted];
+  local_backend -> constants [label="(re-export) isTestFilePath, VALID_*"];
+
+  // Dynamic imports (dashed)
+  local_backend -> search [label="← executeQueryTool (dynamic import)", style=dashed, dir=back];
+  local_backend -> impact [label="← executeImpact (dynamic import)", style=dashed, dir=back, fontcolor="transparent"];
+  local_backend -> context_tools [label="← executeContext (dynamic import)", style=dashed, dir=back, fontcolor="transparent"];
+
+  // --- 2. Barrel → Core (re-exports) ---
+  local_backend -> core_pool_adapter [label="(re-export) isWriteQuery"];
+
+  // --- 3. tool-dispatch.ts → ALL other helpers (hub pattern) ---
+  tool_dispatch -> group [label="dispatchGroupTool, callToolAtGroupRepo"];
+  tool_dispatch -> search [label="executeQueryTool"];
+  tool_dispatch -> context_tools [label="executeContext, executeCypher, ..."];
+  tool_dispatch -> impact [label="executeImpact"];
+  tool_dispatch -> detect_changes [label="executeDetectChanges"];
+  tool_dispatch -> rename [label="executeRename"];
+  tool_dispatch -> api_tools [label="executeRouteMap, executeShapeCheck, ..."];
+  tool_dispatch -> graph_queries [label="queryClusters, queryProcesses, ..."];
+  tool_dispatch -> state_manager [label="StateManager (type)", style=dotted];
+  tool_dispatch -> types_h [label="RepoHandle (type)", style=dotted];
+
+  // --- 4. state-manager.ts → external deps ---
+  state_manager -> core_pool_adapter [label="initLbug, closeLbug, isLbugReady"];
+  state_manager -> storage_repo_manager [label="listRegisteredRepos, cleanupOldKuzuFiles"];
+  state_manager -> core_git_staleness [label="checkStalenessAsync, checkCwdMatch"];
+  state_manager -> core_logger [label="logger"];
+  state_manager -> core_group_service [label="GroupService, GroupToolPort"];
+  state_manager -> types_h [label="CodebaseContext, RepoHandle (type)", style=dotted];
+  state_manager -> stdlib_fs [label="fs.readFile (meta.json)", fontsize=7];
+
+  // --- 5. context-tools.ts ---
+  context_tools -> core_pool_adapter [label="executeQuery, executeParameterized, ..."];
+  context_tools -> core_lbug_config [label="isWalCorruptionError"];
+  context_tools -> logging [label="logQueryError"];
+  context_tools -> symbol_resolution [label="aggregateClusters, resolveSymbolCandidates"];
+  context_tools -> types_h [label="RepoHandle (type)", style=dotted];
+
+  // --- 6. impact.ts ---
+  impact -> core_pool_adapter [label="executeQuery, executeParameterized"];
+  impact -> core_lbug_config [label="isWalCorruptionError"];
+  impact -> logging [label="logQueryError"];
+  impact -> constants [label="isTestFilePath, VALID_RELATION_TYPES, confidenceForRelType"];
+  impact -> symbol_resolution [label="resolveSymbolCandidates"];
+  impact -> types_h [label="RepoHandle (type)", style=dotted];
+
+  // --- 7. search.ts ---
+  search -> core_pool_adapter [label="executeQuery, executeParameterized"];
+  search -> core_embeddings_types [label="collectBestChunks"];
+  search -> core_embeddings_exact [label="rankExactEmbeddingRows"];
+  search -> core_lbug_schema [label="EMBEDDING_TABLE_NAME, EMBEDDING_INDEX_NAME"];
+  search -> core_platform_cap [label="getExactScanLimit, isVectorExtensionSupported"];
+  search -> core_search_phasetimer [label="PhaseTimer"];
+  search -> core_logger [label="logger"];
+  search -> constants [label="VALID_NODE_LABELS"];
+  search -> logging [label="logQueryError, logQueryTiming"];
+  search -> types_h [label="RepoHandle (type)", style=dotted];
+  search -> core_search_bm25 [label="searchFTSFromLbug (dynamic)", style=dashed];
+  search -> mcp_embedder [label="embedQuery, getEmbeddingDims (dynamic)", style=dashed];
+
+  // --- 8. graph-queries.ts ---
+  graph_queries -> core_pool_adapter [label="executeQuery, executeParameterized"];
+  graph_queries -> symbol_resolution [label="aggregateClusters"];
+  graph_queries -> types_h [label="RepoHandle (type)", style=dotted];
+
+  // --- 9. group.ts ---
+  group -> core_group_resolve [label="resolveAtGroupMemberRepoPath"];
+  group -> search [label="executeQueryTool"];
+  group -> context_tools [label="executeContext"];
+  group -> impact [label="executeImpact, executeImpactByUid"];
+  group -> types_h [label="RepoHandle (type)", style=dotted];
+
+  // --- 10. api-tools.ts ---
+  api_tools -> core_pool_adapter [label="executeQuery, executeParameterized"];
+  api_tools -> logging [label="logQueryError"];
+  api_tools -> types_h [label="RepoHandle (type)", style=dotted];
+
+  // --- 11. detect-changes.ts ---
+  detect_changes -> core_pool_adapter [label="executeParameterized"];
+  detect_changes -> storage_git [label="parseDiffHunks, FileDiff"];
+  detect_changes -> logging [label="logQueryError"];
+  detect_changes -> types_h [label="RepoHandle (type)", style=dotted];
+
+  // --- 12. rename.ts ---
+  rename -> context_tools [label="executeContext"];
+  rename -> logging [label="logQueryError"];
+  rename -> types_h [label="RepoHandle (type)", style=dotted];
+  rename -> stdlib_fs [label="fs.readFile, fs.writeFile", fontsize=7];
+
+  // --- 13. symbol-resolution.ts ---
+  symbol_resolution -> core_pool_adapter [label="executeParameterized"];
+  symbol_resolution -> types_h [label="RepoHandle (type)", style=dotted];
+
+  // --- 14. logging.ts ---
+  logging -> core_logger [label="logger"];
+
+  // --- 15. types.ts ---
+  types_h -> storage_repo_manager [label="RegistryEntry (type)", style=dotted];
+
+  // ===================================================================
+  // EDGES: MCP PROTOCOL LAYER
+  // ===================================================================
+
+  // --- server.ts ---
+  server -> ext_mcp_sdk [label="Server", fontsize=9];
+  server -> core_environment [label="getVersion"];
+  server -> compatible_transport [label="CompatibleStdioServerTransport"];
+  server -> tools [label="GITNEXUS_TOOLS"];
+  server -> stdio_context [label="installGlobalStdoutSentinel"];
+  server -> local_backend [label="LocalBackend (type)", style=dotted];
+  server -> resources [label="getResourceDefinitions, readResource"];
+  server -> core_logger [label="flushLoggerSync (dynamic)", style=dashed];
+
+  // --- resources.ts ---
+  resources -> local_backend [label="LocalBackend (type)", style=dotted];
+  resources -> staleness [label="checkStaleness"];
+
+  // --- staleness.ts ---
+  staleness -> core_git_staleness [label="(re-export) checkStaleness, StalenessInfo"];
+
+  // --- stdio-context.ts ---
+  stdio_context -> stdlib_async_hooks [label="AsyncLocalStorage"];
+  stdio_context -> stdio_capture [label="realStdoutWrite, setActiveStdoutWrite"];
+
+  // --- compatible-stdio-transport.ts ---
+  compatible_transport -> stdlib_process [label="process"];
+  compatible_transport -> ext_mcp_sdk [label="Transport, JSONRPCMessage", fontsize=9];
+  compatible_transport -> stdio_context [label="withMcpWrite"];
+
+  // --- mcp/embedder.ts ---
+  mcp_embedder -> ext_transformers [label="pipeline, env", fontsize=9];
+  mcp_embedder -> core_embeddings_http [label="isHttpMode, httpEmbedQuery"];
+  mcp_embedder -> core_embeddings_config [label="resolveEmbeddingConfig"];
+  mcp_embedder -> core_embeddings_hfenv [label="applyHfEnvOverrides, withHfDownloadRetry"];
+  mcp_embedder -> core_pool_adapter [label="silenceStdout, restoreStdout"];
+  mcp_embedder -> core_logger [label="logger"];
+
+  // --- mcp/lbug-adapter.ts ---
+  mcp_lbug_adapter -> core_pool_adapter [label="(re-export all)"];
+}

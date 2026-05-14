@@ -1,0 +1,144 @@
+digraph Cross_Layer_Deps {
+  rankdir=LR;
+  label="GitNexus Cross-Layer Dependency Graph — Edges Between Layers";
+  fontsize=16;
+  fontname="Consolas";
+  compound=true;
+  bgcolor="#1E1E2E";
+  fontcolor="#CDD6F4";
+  edge [fontname="Consolas", fontsize=10, penwidth=2];
+  node [fontname="Consolas", fontsize=12, style="filled", shape="box", penwidth=2];
+
+  // Layer nodes (aggregate)
+  cli [label="CLI Layer\n22 files\nsrc/cli/", fillcolor="#4A90D9", fontcolor="#FFFFFF"];
+  server [label="Server Layer\n25 files\nsrc/server/", fillcolor="#50B86C", fontcolor="#FFFFFF"];
+  mcp [label="MCP Layer\n24 files\nsrc/mcp/", fillcolor="#50B86C", fontcolor="#FFFFFF"];
+  core_analyze [label="Core: Analyze\n4 files\ncore/analyze/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_embeddings [label="Core: Embeddings\n18 files\ncore/embeddings/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_ingestion [label="Core: Ingestion\n~142 files\ncore/ingestion/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_portability [label="Core: Portability\n2 files\ncore/portability/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  storage [label="Storage Layer\n12 files\nsrc/storage/", fillcolor="#9B59B6", fontcolor="#FFFFFF"];
+  config [label="Config Layer\n5 files\nsrc/config/", fillcolor="#95A5A6", fontcolor="#FFFFFF"];
+  generated [label="Generated\n1 file\nsrc/generated/", fillcolor="#95A5A6", fontcolor="#FFFFFF"];
+  lib [label="Lib\n1 file\nsrc/lib/", fillcolor="#95A5A6", fontcolor="#FFFFFF"];
+  types [label="Types\n1 file\nsrc/types/", fillcolor="#95A5A6", fontcolor="#FFFFFF"];
+  core_lbug [label="Core: LBUG\n15 files\ncore/lbug/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_graph [label="Core: Graph\n2 files\ncore/graph/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_search [label="Core: Search\n5 files\ncore/search/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_treesitter [label="Core: Tree-sitter\n17 files\ncore/tree-sitter/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_platform [label="Core: Platform\n1 file\ncore/platform/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_wiki [label="Core: Wiki\n7 files\ncore/wiki/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_group [label="Core: Group\n16 files\ncore/group/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_vectorstore [label="Core: Vector Store\n6 files\ncore/vector-store/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_augmentation [label="Core: Augment\n1 file\ncore/augmentation/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_environment [label="Core: Environment\n1 file\ncore/environment/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_logger [label="Core: Logger\n1 file\ncore/logger/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+  core_git_staleness [label="Core: Git Staleness\n1 file\ncore/git-staleness/", fillcolor="#F5A623", fontcolor="#FFFFFF"];
+
+  // ============ CLI → Core ============
+  cli -> core_analyze [label="(10 files import) analyze: finalizer, types, phases", color="#F5A623", penwidth=3];
+  cli -> core_embeddings [label="doctor: config, http-client, hf-env", color="#F5A623", penwidth=1];
+  cli -> core_portability [label="setup, ai-context, optional-grammars: getPortability", color="#F5A623", penwidth=2];
+  cli -> core_ingestion [label="skill-gen: community-processor, process-processor\nanalyze: max-file-size", color="#F5A623", penwidth=2];
+  cli -> core_wiki [label="wiki: generator, llm-client, cursor-client", color="#F5A623", penwidth=2];
+  cli -> core_augmentation [label="augment: engine", color="#F5A623", penwidth=1];
+  cli -> core_platform [label="doctor: capabilities", color="#F5A623", penwidth=1];
+  cli -> core_environment [label="index, setup: getVersion", color="#F5A623", penwidth=1];
+  cli -> core_logger [label="14 files import: logger", color="#F5A623", penwidth=3];
+  cli -> core_lbug [label="analyze: closeLbug", color="#F5A623", penwidth=1];
+  cli -> core_graph [label="skill-gen: KnowledgeGraph types", color="#F5A623", penwidth=1];
+
+  // ============ CLI → Storage ============
+  cli -> storage [label="(8 files import) repo-manager barrel + git", color="#9B59B6", penwidth=4];
+  cli -> generated [label="optional-grammars: DEV_APP_ROOT_URL", color="#95A5A6", penwidth=1];
+  cli -> types [label="skill-gen: PipelineResult", color="#95A5A6", penwidth=1];
+
+  // ============ CLI → Server/MCP ============
+  cli -> server [label="serve: createServer", color="#50B86C", penwidth=1];
+  cli -> mcp [label="eval-server, tool: LocalBackend\nmcp: stdio-context", color="#50B86C", penwidth=2];
+
+  // ============ Server → Core ============
+  server -> core_lbug [label="(9 routes import) lbug-adapter, pool-adapter", color="#F5A623", penwidth=4];
+  server -> core_portability [label="analyze route: getPortability", color="#F5A623", penwidth=1];
+  server -> core_environment [label="health: getVersion", color="#F5A623", penwidth=1];
+  server -> core_logger [label="(4 files import) logger", color="#F5A623", penwidth=2];
+  server -> core_search [label="search route: hybridSearch, bm25-index", color="#F5A623", penwidth=1];
+  server -> core_graph [label="(through route types)", color="#F5A623", penwidth=1];
+
+  // ============ Server → Storage ============
+  server -> storage [label="analyze, repos routes: repo-manager", color="#9B59B6", penwidth=2];
+
+  // ============ Server → MCP ============
+  server -> mcp [label="repo-resolver: LocalBackend", color="#50B86C", penwidth=1];
+
+  // ============ MCP → Core ============
+  mcp -> core_embeddings [label="search helper: types, exact-search\nembedder: config, http-client, hf-env", color="#F5A623", penwidth=2];
+  mcp -> core_lbug [label="(ALL helpers import) pool-adapter, lbug-adapter, lbug-config, schema", color="#F5A623", penwidth=5];
+  mcp -> core_environment [label="server: getVersion", color="#F5A623", penwidth=1];
+  mcp -> core_logger [label="(4 files import) logger", color="#F5A623", penwidth=2];
+  mcp -> core_git_staleness [label="staleness, state-manager: checkStaleness", color="#F5A623", penwidth=2];
+  mcp -> core_graph [label="(through helpers)", color="#F5A623", penwidth=1];
+  mcp -> core_search [label="search helper: PhaseTimer", color="#F5A623", penwidth=1];
+  mcp -> core_platform [label="search: capabilities", color="#F5A623", penwidth=1];
+  mcp -> core_group [label="group helper: resolve-at-member, service", color="#F5A623", penwidth=2];
+
+  // ============ MCP → Storage ============
+  mcp -> storage [label="state-manager: repo-manager\ndetect-changes: git.parseDiffHunks", color="#9B59B6", penwidth=2];
+
+  // ============ Core (Analyze) → Everything ============
+  core_analyze -> storage [label="finalizer: repo-manager, git", color="#9B59B6", penwidth=2];
+  core_analyze -> core_ingestion [label="run-analyze: pipeline", color="#F5A623", penwidth=4];
+  core_analyze -> core_embeddings [label="run-analyze: cache-loader, diagnostic", color="#F5A623", penwidth=2];
+  core_analyze -> core_lbug [label="run-analyze: lbug-adapter, schema", color="#F5A623", penwidth=2];
+  core_analyze -> core_search [label="run-analyze: fts-indexes", color="#F5A623", penwidth=1];
+  core_analyze -> core_environment [label="run-analyze: embedding-mode", color="#F5A623", penwidth=1];
+  core_analyze -> cli [label="finalizer: ai-context", color="#4A90D9", penwidth=1];
+
+  // ============ Core Embeddings → everything ============
+  core_embeddings -> core_portability [label="embedder, provider: getPortability", color="#F5A623", penwidth=2];
+  core_embeddings -> core_lbug [label="cache-loader, embedding-pipeline: lbug-adapter, repository", color="#F5A623", penwidth=2];
+  core_embeddings -> core_platform [label="config, pipeline: capabilities", color="#F5A623", penwidth=1];
+  core_embeddings -> core_ingestion [label="structural-extractor: languages, types", color="#F5A623", penwidth=1];
+  core_embeddings -> core_treesitter [label="ast-utils: parser-loader", color="#F5A623", penwidth=1];
+  core_embeddings -> core_vectorstore [label="pipeline: registry", color="#F5A623", penwidth=1];
+  core_embeddings -> core_logger [label="embedder, pipeline: logger", color="#F5A623", penwidth=1];
+  core_embeddings -> config [label="config, provider: portable-config", color="#95A5A6", penwidth=2];
+  core_embeddings -> generated [label="embedder: DEV_APP_ROOT_URL", color="#95A5A6", penwidth=1];
+
+  // ============ Core Ingestion → everything ============
+  core_ingestion -> core_graph [label="(8+ files) KnowledgeGraph types", color="#F5A623", penwidth=3];
+  core_ingestion -> core_treesitter [label="import-processor, heritage-processor: parser-loader", color="#F5A623", penwidth=3];
+  core_ingestion -> core_logger [label="(15+ files) logger", color="#F5A623", penwidth=3];
+  core_ingestion -> core_portability [label="community-processor, parse-impl: getPortability", color="#F5A623", penwidth=2];
+  core_ingestion -> lib [label="(8+ files) generateId", color="#95A5A6", penwidth=2];
+  core_ingestion -> config [label="filesystem-walker: ignore-service", color="#95A5A6", penwidth=1];
+  core_ingestion -> generated [label="community-processor: DEV_APP_ROOT_URL", color="#95A5A6", penwidth=1];
+  core_ingestion -> types [label="pipeline: PipelineResult", color="#95A5A6", penwidth=1];
+
+  // ============ Core Portability ============
+  core_portability -> generated [label="contract: IS_PORTABLE_BUILD", color="#95A5A6", penwidth=1];
+
+  // ============ Storage internal ============
+  storage -> config [label="(through repo-manager config)", color="#95A5A6", penwidth=1];
+
+  // Edge weight labels legend
+  subgraph cluster_legend {
+    label="Edge Weight Legend";
+    fontsize=12;
+    fontcolor="#CDD6F4";
+    style="filled";
+    color="#3E3E4E";
+    fillcolor="#2E2E3E";
+
+    l1 [label="1-2 imports", fillcolor="#585B70", fontcolor="#FFFFFF"];
+    l2 [label="3-5 imports", fillcolor="#585B70", fontcolor="#FFFFFF"];
+    l3 [label="6-10 imports", fillcolor="#585B70", fontcolor="#FFFFFF"];
+    l4 [label="10+ imports", fillcolor="#585B70", fontcolor="#FFFFFF"];
+    l5 [label="critical path\n(heavy usage)", fillcolor="#E74C3C", fontcolor="#FFFFFF"];
+
+    l1 -> l2 [label="thin", color="#585B70"];
+    l2 -> l3 [label="medium", color="#585B70", penwidth=2];
+    l3 -> l4 [label="thick", color="#585B70", penwidth=3];
+    l4 -> l5 [label="heaviest", color="#E74C3C", penwidth=5];
+  }
+}

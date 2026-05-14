@@ -1,0 +1,84 @@
+%% GitNexus Portable Build Variants — Bun vs Node.js
+%% Yellow = exclusive to variant, Blue = shared
+
+graph LR
+  classDef shared fill:#AED6F1,stroke:#2980B9,color:#1A5276
+  classDef bun fill:#F1948A,stroke:#C0392B,color:#641E16
+  classDef bunExcl fill:#F9E79F,stroke:#D4AC0D,color:#7D6608
+  classDef node fill:#76D7C4,stroke:#1ABC9C,color:#0E6655
+  classDef nodeExcl fill:#ABEBC6,stroke:#27AE60,color:#1E8449
+
+  subgraph Shared["Shared Code Layer (identical in both variants)"]
+    SH_CLI["CLI Layer (cli/)"]:::shared
+    SH_Pipeline["Ingestion Pipeline (core/ingestion/)"]:::shared
+    SH_Graph["Knowledge Graph (core/graph/)"]:::shared
+    SH_Group["Group Support (core/group/)"]:::shared
+    SH_Search["Search (core/search/)"]:::shared
+    SH_Wiki["Wiki (core/wiki/)"]:::shared
+    SH_Server["HTTP + MCP Server (server/ + mcp/)"]:::shared
+    SH_Storage["Storage (storage/)"]:::shared
+    SH_Config["Config (config/)"]:::shared
+  end
+
+  subgraph Bun_Build["Bun Portable Binary (~154 MB, requires AVX)"]
+    BUN_Binary["gitnexus.exe"]:::bun
+    BUN_Entry["portable-bootstrap.ts"]:::bun
+    BUN_Portable["PortableContract
+isPortable=true, hasNativeAddons=false
+hasWorkerPool=false, hasLeidenAlgorithm=false
+hasOnnxRuntimeNode=false
+hasVectorExtension=true, hasHttpEmbeddings=true"]:::bun
+    BUN_WasmProvider["WasmPortableProvider"]:::bun
+    BUN_WASM["Bundled WASM Grammars
+(13 tree-sitter grammars)"]:::bunExcl
+    BUN_Models["Bundled ONNX Model
+(~23 MB)"]:::bunExcl
+    BUN_ONNX["WASM ONNX Runtime
+(~4 MB)"]:::bunExcl
+    BUN_Sidecar["ladybug-wrapper.mjs
+(bundled sidecar)"]:::bunExcl
+    BUN_WebUI["Web UI static assets"]:::bunExcl
+  end
+
+  subgraph Node_Pkg["Node.js npm Package (~80 MB, no AVX)"]
+    NODE_Pkg["npm install -g gitnexus"]:::node
+    NODE_Entry["cli/index.ts"]:::node
+    NODE_Dev["DevContract
+isPortable=false, hasNativeAddons=true
+hasWorkerPool=true, hasLeidenAlgorithm=true
+hasOnnxRuntimeNode=true
+hasVectorExtension=true, hasHttpEmbeddings=true"]:::node
+    NODE_NativeProvider["NativeNodeProvider"]:::node
+    NODE_Native["Native .node Addons
+(tree-sitter bindings)"]:::nodeExcl
+    NODE_ONNX["onnxruntime-node
+(GPU capable)"]:::nodeExcl
+    NODE_Worker["Worker Thread Pool"]:::nodeExcl
+    NODE_Leiden["Native Leiden Algorithm"]:::nodeExcl
+    NODE_Sidecar["LadybugRepository (optional)"]:::nodeExcl
+  end
+
+  BUN_Binary --> BUN_Entry
+  BUN_Entry --> SH_CLI
+  SH_CLI --> SH_Pipeline
+  SH_Pipeline --> SH_Graph
+  SH_Pipeline --> SH_Group
+  SH_Graph --> SH_Search
+  SH_Graph --> SH_Wiki
+  SH_Graph --> SH_Server
+  SH_Server --> SH_Storage
+  SH_Config --> SH_Server
+
+  BUN_WASM -->|"embedded .wasm"| SH_Pipeline
+  BUN_ONNX --> BUN_WasmProvider
+  BUN_WasmProvider --> BUN_Portable
+  BUN_Portable -->|"disables workers"| SH_Pipeline
+  BUN_Sidecar --> SH_Server
+
+  NODE_Native -->|"native .node"| SH_Pipeline
+  NODE_ONNX --> NODE_NativeProvider
+  NODE_Worker -->|"parallel parsing"| SH_Pipeline
+  NODE_Leiden -->|"community detection"| SH_Pipeline
+  NODE_NativeProvider --> NODE_Dev
+  NODE_Dev -->|"enables workers"| SH_Pipeline
+  NODE_Sidecar --> SH_Server

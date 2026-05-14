@@ -1,0 +1,12 @@
+import { SyntaxNode, type EnclosingClassInfo } from '../../../utils/ast-helpers.js';
+import type { FieldInfo, FieldExtractorContext } from '../../../field-types.js';
+import type { MethodInfo, MethodExtractorContext } from '../../../method-types.js';
+import type { LanguageProvider } from '../../../language-provider.js';
+export declare const clearCaches: () => void;
+export declare function findEnclosingClassNode(node: SyntaxNode): SyntaxNode | null;
+export declare function findClassNodeByQualifiedName(node: SyntaxNode): SyntaxNode | null;
+export declare function getFieldInfo(classNode: SyntaxNode, provider: LanguageProvider, context: FieldExtractorContext): Map<string, FieldInfo> | undefined;
+export declare function getMethodInfo(classNode: SyntaxNode, provider: LanguageProvider, context: MethodExtractorContext): Map<string, MethodInfo> | undefined;
+export declare const findEnclosingFunctionId: (node: SyntaxNode, filePath: string, provider: LanguageProvider) => string | null;
+export declare const cachedFindEnclosingClassInfo: (node: SyntaxNode, filePath: string, resolveEnclosingOwner?: (node: SyntaxNode) => SyntaxNode | null) => EnclosingClassInfo | null;
+export declare const cachedExportCheck: (checker: (node: SyntaxNode, name: string) => boolean, node: SyntaxNode, name: string) => boolean;

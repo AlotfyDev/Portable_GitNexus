@@ -1,0 +1,120 @@
+digraph G {
+  rankdir=TB;
+  splines=polyline;
+  nodesep=0.5;
+  ranksep=0.7;
+  compound=true;
+  fontname="Consolas";
+  edge [fontname="Consolas" fontsize=9];
+
+  // ─── Color palette ──────────────────────────────────────────────────
+  // Barrel         → #9B59B6 (purple)  with white text
+  // Sub-module     → #D2B4DE (light purple)
+  // Registry       → #8E44AD (dark purple) with white text
+  // git.ts         → #BB8FCE (medium purple)
+  // Stdlib         → #E8E8E8 (gray)
+  // ─────────────────────────────────────────────────────────────────────
+
+  subgraph cluster_barrel {
+    label="Barrel (repo-manager.ts)";
+    style="filled,rounded,dashed";
+    color="#9B59B6";
+    fillcolor="#F9F5FC";
+    fontcolor="#9B59B6";
+    fontsize=12;
+
+    barrel [label="repo-manager.ts\n(122 lines)" shape=box style="filled,rounded" fillcolor="#9B59B6" fontcolor=white];
+    barrel_git [label="imports: getInferredRepoName\nresolveRepoIdentityRoot" shape=note style="filled,rounded" fillcolor="#E8DAEF"];
+  }
+
+  subgraph cluster_submodules {
+    label="repo-manager/ sub-modules";
+    style="filled,rounded";
+    color="#9B59B6";
+    fillcolor="#F4ECF7";
+    fontcolor="#9B59B6";
+    fontsize=12;
+
+    types   [label="types.ts\n(56 lines)\nRepoMeta, IndexedRepo\nRegistryEntry, CwdMatch" shape=box style="filled,rounded" fillcolor="#D2B4DE"];
+    constants [label="constants.ts\n(2 lines)\nGITNEXUS_DIR" shape=box style="filled,rounded" fillcolor="#D2B4DE"];
+    errors  [label="errors.ts\n(89 lines)\n5 error classes" shape=box style="filled,rounded" fillcolor="#D2B4DE"];
+    paths   [label="paths.ts\n(38 lines)\ncanonicalizePath\ngetStoragePath" shape=box style="filled,rounded" fillcolor="#D2B4DE"];
+    meta    [label="meta.ts\n(91 lines)\nloadMeta, saveMeta\nhasIndex, loadRepo" shape=box style="filled,rounded" fillcolor="#D2B4DE"];
+    config  [label="config.ts\n(27 lines)\nloadCLIConfig" shape=box style="filled,rounded" fillcolor="#D2B4DE"];
+    gitignore [label="gitignore.ts\n(43 lines)\nensureGitNexusIgnored" shape=box style="filled,rounded" fillcolor="#D2B4DE"];
+    finalization [label="finalization.ts\n(32 lines)\nassertAnalysisFinalized" shape=box style="filled,rounded" fillcolor="#D2B4DE"];
+  }
+
+  subgraph cluster_registry {
+    label="repo-manager/registry/";
+    style="filled,rounded";
+    color="#8E44AD";
+    fillcolor="#F4ECF7";
+    fontcolor="#8E44AD";
+    fontsize=12;
+
+    registry [label="index.ts\n(104 lines)\nreadRegistry, writeRegistry\nunregisterRepo, listRegisteredRepos\nresolveRegistryEntry, findSiblingClones" shape=box style="filled,rounded" fillcolor="#8E44AD" fontcolor=white];
+  }
+
+  subgraph cluster_git {
+    label="External dependency";
+    style="filled,rounded,dashed";
+    color="#7D3C98";
+    fillcolor="#F4ECF7";
+
+    git [label="git.ts\n(319 lines)\ngetInferredRepoName\nresolveRepoIdentityRoot\ngetRemoteUrl, getGitRoot\nparseDiffHunks" shape=box style="filled,rounded" fillcolor="#BB8FCE"];
+  }
+
+  subgraph cluster_stdlib {
+    label="Node.js stdlib";
+    style="filled,rounded,dashed";
+    color="#95A5A6";
+    fillcolor="#F8F9F9";
+
+    stdlib [label="fs, fs/promises\npath, os\nchild_process" shape=box style="filled,rounded" fillcolor="#E8E8E8"];
+  }
+
+  // ─── Barrel re-exports (dashed) ─────────────────────────────────────
+  barrel -> types [style=dashed label="export *" weight=10];
+  barrel -> constants [style=dashed label="export *" weight=10];
+  barrel -> errors [style=dashed label="export *" weight=10];
+  barrel -> paths [style=dashed label="export *" weight=10];
+  barrel -> meta [style=dashed label="export *" weight=10];
+  barrel -> gitignore [style=dashed label="export *" weight=10];
+  barrel -> config [style=dashed label="export *" weight=10];
+  barrel -> finalization [style=dashed label="export *" weight=10];
+  barrel -> registry [style=dashed label="readRegistry, unregisterRepo\nassertSafeStoragePath\nresolveRegistryEntry\nlistRegisteredRepos\nfindSiblingClones"];
+
+  // ─── Intra-submodule edges ─────────────────────────────────────────
+  constants -> paths [label="GITNEXUS_DIR" dir=back weight=5];
+
+  types  -> errors [label="RegistryEntry" dir=back weight=5];
+  types  -> meta [label="RepoMeta, IndexedRepo" dir=back weight=5];
+  types  -> config [label="CLIConfig" dir=back weight=5];
+  types  -> registry [label="RegistryEntry" dir=back weight=5];
+
+  paths  -> meta [label="getStoragePaths" dir=back weight=5];
+  paths  -> gitignore [label="getStoragePath" dir=back weight=5];
+  paths  -> config [label="getGlobalDir\ngetGlobalConfigPath" dir=back weight=5];
+  paths  -> finalization [label="getStoragePaths\ncanonicalizePath\ngetGlobalRegistryPath" dir=back weight=5];
+  paths  -> registry [label="getGlobalDir\ngetGlobalRegistryPath\ncanonicalizePath" dir=back weight=5];
+
+  errors -> finalization [label="AnalysisNotFinalizedError" dir=back weight=5];
+  errors -> registry [label="UnsafeStoragePathError\nRegistryNotFoundError\nRegistryAmbiguousTargetError" dir=back weight=5];
+
+  registry -> finalization [label="readRegistry" weight=5];
+
+  // ─── Barrel internal imports ───────────────────────────────────────
+  barrel_git -> barrel [dir=none style=dotted weight=1];
+  barrel -> git [label="getInferredRepoName\nresolveRepoIdentityRoot" weight=5];
+
+  // ─── Stdlib usage ──────────────────────────────────────────────────
+  errors -> stdlib [label="path" style=dotted dir=back weight=1];
+  paths -> stdlib [label="fs, path, os" style=dotted dir=back weight=1];
+  meta -> stdlib [label="fs/promises, path" style=dotted dir=back weight=1];
+  config -> stdlib [label="fs/promises, path" style=dotted dir=back weight=1];
+  gitignore -> stdlib [label="fs/promises, path" style=dotted dir=back weight=1];
+  finalization -> stdlib [label="fs/promises, path" style=dotted dir=back weight=1];
+  registry -> stdlib [label="fs/promises, path" style=dotted dir=back weight=1];
+  git -> stdlib [label="child_process\nfs, path" style=dotted dir=back weight=1];
+}

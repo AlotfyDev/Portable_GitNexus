@@ -1,0 +1,95 @@
+digraph PortabilityComponents {
+  rankdir=LR;
+  splines=ortho;
+  node [shape=box, style="filled,rounded", fillcolor="#FDEBD0", fontname="Consolas", fontsize=10];
+  edge [color="#555555", fontname="Consolas", fontsize=9];
+
+  // ── Portability core ──
+  subgraph cluster_portability {
+    label="core/portability/";
+    fillcolor="#FEF5E7";
+    style=filled;
+    color="#F5CBA7";
+
+    contract [label="contract.ts\nPortabilityContract (interface)\nPortableContract (impl)\nDevContract (impl)"];
+    idx [label="index.ts\ngetPortability() (singleton)", style="dashed,rounded"];
+  }
+
+  // ── Internal edge ──
+  idx -> contract [label="PortabilityContract, PortableContract, DevContract"];
+
+  // ── Generated constants ──
+  node [fillcolor="#F0F0F0", style="rounded"];
+  IS_PORTABLE [label="generated/constants.js\nIS_PORTABLE_BUILD\nDEV_APP_ROOT_URL"];
+
+  contract -> IS_PORTABLE [label="IS_PORTABLE_BUILD, DEV_APP_ROOT_URL"];
+  idx -> IS_PORTABLE [label="IS_PORTABLE_BUILD"];
+
+  // ── Subgraph: 7 Core consumers ──
+  subgraph cluster_core_consumers {
+    label="core/ consumers (7 files)";
+    fillcolor="#F5F5F5";
+    style=filled;
+    color="#CCCCCC";
+    node [fillcolor="#FDEBD0"];
+
+    provider [label="embeddings/provider.ts\ncreateProviders()"];
+    embedder [label="embeddings/embedder.ts\nhasOrtCudaProvider()\nisCudaAvailable()"];
+    parser [label="tree-sitter/parser-loader.ts\ncreateParserForLanguage()"];
+    caps [label="platform/capabilities.ts\ngetRuntimeCapabilities()"];
+    extLoader [label="lbug/extension-loader.ts\nloadVectorExtension()"];
+    sidecar [label="sidecar/ladybug-adapter.ts"];
+    community [label="ingestion/\ncommunity-processor.ts\nprocessCommunities()"];
+  }
+
+  // ── Subgraph: 3 CLI consumers ──
+  subgraph cluster_cli_consumers {
+    label="cli/ consumers (3 files)";
+    fillcolor="#F5F5F5";
+    style=filled;
+    color="#CCCCCC";
+    node [fillcolor="#FDEBD0"];
+
+    setup [label="cli/setup.ts\nsetupCommand()"];
+    ai_context [label="cli/ai-context.ts\ngenerateAIContextFiles()"];
+    optional_grammars [label="cli/optional-grammars.ts\nensureOptionalGrammars()"];
+  }
+
+  // ── Subgraph: 2 Server consumers ──
+  subgraph cluster_server_consumers {
+    label="server/ consumers (2 files)";
+    fillcolor="#F5F5F5";
+    style=filled;
+    color="#CCCCCC";
+    node [fillcolor="#FDEBD0"];
+
+    webui [label="server/web-ui.ts\nstartWebUI()"];
+    analyze_route [label="server/routes/analyze.ts\nanalyzeHandler()"];
+  }
+
+  // ── Config consumer ──
+  subgraph cluster_config_consumers {
+    label="config/ consumer (1 file)";
+    fillcolor="#F5F5F5";
+    style=filled;
+    color="#CCCCCC";
+    node [fillcolor="#FDEBD0"];
+
+    portableCfg [label="config/portable-config.ts\nloadPortableConfig()"];
+  }
+
+  // ── All consumers connect to portability index ──
+  provider -> idx [label="getPortability()"];
+  embedder -> idx [label="getPortability()"];
+  parser -> idx [label="getPortability()"];
+  caps -> idx [label="getPortability()"];
+  extLoader -> idx [label="getPortability()"];
+  sidecar -> idx [label="getPortability()"];
+  community -> idx [label="getPortability()"];
+  setup -> idx [label="getPortability()"];
+  ai_context -> idx [label="getPortability()"];
+  optional_grammars -> idx [label="getPortability()"];
+  webui -> idx [label="getPortability()"];
+  analyze_route -> idx [label="getPortability()"];
+  portableCfg -> idx [label="getPortability()"];
+}

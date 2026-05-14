@@ -1,0 +1,191 @@
+digraph CLI_Layer {
+  rankdir=TB; splines=ortho; compound=true; fontname="Consolas";
+  node [shape=box, style="rounded,filled", fontname="Consolas", fontsize=10];
+  edge [fontname="Consolas", fontsize=9, arrowsize=0.7];
+
+  // ===== Color scheme =====
+  // blue (#4A90D9)  — CLI entry files
+  // lightblue (#B8D4F0) — CLI command files
+  // orange (#F5A623) — Core dependencies (external)
+  // purple (#9B59B6) — Storage dependencies (external)
+  // lightgray — barrel/utility files
+
+  // ===== Subgraph: CLI Layer =====
+  subgraph cluster_cli {
+    label="CLI Layer (src/cli/)"; fontsize=12; style=filled; fillcolor="#F8F9FA";
+    color="#D0D5DD";
+
+    // ── Entry File ──
+    cli_index [label="index.ts\n(entry)", fillcolor="#4A90D9", fontcolor="white", shape=box];
+
+    // ── Dispatch ──
+    cli_lazy_action [label="lazy-action.ts\ndispatch", fillcolor="#E8E8E8", style="dashed"];
+
+    // ── Utility files ──
+    cli_cli_message [label="cli-message.ts\n(cliInfo/cliWarn/cliError)", fillcolor="#E8E8E8"];
+    cli_optional_grammars [label="optional-grammars.ts\n(detectMissing/warn)", fillcolor="#E8E8E8"];
+    cli_ai_context [label="ai-context.ts\n(generateAIContextFiles)", fillcolor="#E8E8E8"];
+    cli_skill_gen [label="skill-gen.ts\n(generateSkillFiles)", fillcolor="#E8E8E8"];
+
+    // ── Command files ──
+    cli_analyze [label="analyze.ts\n(analyzeCommand)", fillcolor="#B8D4F0"];
+    cli_setup [label="setup.ts\n(setupCommand)", fillcolor="#B8D4F0"];
+    cli_serve [label="serve.ts\n(serveCommand)", fillcolor="#B8D4F0"];
+    cli_mcp [label="mcp.ts\n(mcpCommand)", fillcolor="#B8D4F0"];
+    cli_list [label="list.ts\n(listCommand)", fillcolor="#B8D4F0"];
+    cli_status [label="status.ts\n(statusCommand)", fillcolor="#B8D4F0"];
+    cli_doctor [label="doctor.ts\n(doctorCommand)", fillcolor="#B8D4F0"];
+    cli_clean [label="clean.ts\n(cleanCommand)", fillcolor="#B8D4F0"];
+    cli_remove [label="remove.ts\n(removeCommand)", fillcolor="#B8D4F0"];
+    cli_wiki [label="wiki.ts\n(wikiCommand)", fillcolor="#B8D4F0"];
+    cli_augment [label="augment.ts\n(augmentCommand)", fillcolor="#B8D4F0"];
+    cli_publish [label="publish.ts\n(publishCommand)", fillcolor="#B8D4F0"];
+    cli_tool [label="tool.ts\n(query/context/impact/\ncypher/detectChanges)", fillcolor="#B8D4F0"];
+    cli_eval_server [label="eval-server.ts\n(evalServerCommand)", fillcolor="#B8D4F0"];
+    cli_index_repo [label="index-repo.ts\n(indexCommand)", fillcolor="#B8D4F0"];
+    cli_group [label="group.ts\n(registerGroupCommands)", fillcolor="#B8D4F0"];
+  }
+
+  // ===== External subgraphs =====
+  subgraph cluster_core {
+    label="Core Layer (src/core/)"; fontsize=12; style=filled; fillcolor="#FFF8E1";
+    color="#E6A817";
+    node [fillcolor="#F5A623", fontcolor="white"];
+
+    core_run_analyze [label="run-analyze.ts\n(runFullAnalysis)"];
+    core_environment [label="environment.ts\n(getVersion)"];
+    core_logger [label="logger.ts\n(logger/flushLoggerSync)"];
+    core_lbug_adapter [label="lbug/lbug-adapter.ts\n(withLbugDb/closeLbug)"];
+    core_portability [label="portability/index.ts\n(getPortability)"];
+    core_platform_cap [label="platform/capabilities.ts\n(getRuntimeCapabilities)"];
+    core_embeddings_config [label="embeddings/config.ts\n(resolveEmbeddingConfig)"];
+    core_embeddings_http [label="embeddings/http-client.ts\n(isHttpMode)"];
+    core_embeddings_hf [label="embeddings/hf-env.ts\n(isHfDownloadFailure)"];
+    core_wiki_generator [label="wiki/generator.ts\n(WikiGenerator)"];
+    core_wiki_llm [label="wiki/llm-client.ts\n(resolveLLMConfig)"];
+    core_wiki_cursor [label="wiki/cursor-client.ts\n(detectCursorCLI)"];
+    core_augmentation [label="augmentation/engine.ts\n(augment)"];
+    core_ingestion_maxfile [label="ingestion/utils/\nmax-file-size.ts"];
+    core_ingestion_community [label="ingestion/\ncommunity-processor.ts"];
+    core_ingestion_process [label="ingestion/\nprocess-processor.ts"];
+    core_graph_types [label="graph/types.ts\n(KnowledgeGraph)"];
+    types_pipeline [label="types/pipeline.ts\n(PipelineResult)"];
+    core_group_storage [label="group/storage.ts"];
+    core_group_config [label="group/config-parser.ts"];
+    core_group_sync [label="group/sync.ts"];
+  }
+
+  subgraph cluster_storage {
+    label="Storage Layer (src/storage/)"; fontsize=12; style=filled; fillcolor="#F3E5F5";
+    color="#7B1FA2";
+    node [fillcolor="#9B59B6", fontcolor="white"];
+
+    storage_repo_manager [label="repo-manager.ts\n(findRepo/listRegisteredRepos/\ngetStoragePaths/loadMeta/…)"];
+    storage_git [label="git.ts\n(getGitRoot/isGitRepo/\ngetCurrentCommit/…)"];
+  }
+
+  subgraph cluster_mcp {
+    label="MCP Layer (src/mcp/)"; fontsize=12; style=filled; fillcolor="#E8F5E9";
+    color="#388E3C";
+    node [fillcolor="#66BB6A", fontcolor="white"];
+
+    mcp_local_backend [label="local/local-backend.ts\n(LocalBackend)"];
+    mcp_server [label="server.ts\n(startMCPServer)"];
+    mcp_stdio_context [label="stdio-context.ts\n(installGlobalStdoutSentinel)"];
+  }
+
+  subgraph cluster_server {
+    label="Server Layer (src/server/)"; fontsize=12; style=filled; fillcolor="#FCE4EC";
+    color="#C62828";
+    node [fillcolor="#EF5350", fontcolor="white"];
+
+    server_api [label="api.ts\n(createServer)"];
+  }
+
+  // ===== Edges: CLI internal dispatch =====
+  cli_index -> cli_lazy_action [label="createLazyAction", style=dotted];
+  cli_lazy_action -> cli_analyze [label="lazy-import analyzeCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_setup [label="lazy-import setupCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_serve [label="lazy-import serveCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_mcp [label="lazy-import mcpCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_list [label="lazy-import listCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_status [label="lazy-import statusCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_doctor [label="lazy-import doctorCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_clean [label="lazy-import cleanCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_remove [label="lazy-import removeCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_wiki [label="lazy-import wikiCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_augment [label="lazy-import augmentCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_publish [label="lazy-import publishCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_tool [label="lazy-import query/context/\nimpact/cypher/detectChanges", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_eval_server [label="lazy-import evalServerCommand", style=dotted, color="#4A90D9"];
+  cli_lazy_action -> cli_index_repo [label="lazy-import indexCommand", style=dotted, color="#4A90D9"];
+  cli_index -> cli_group [label="registerGroupCommands", style=solid, color="#4A90D9"];
+
+  // ===== Edges: CLI → Core =====
+  cli_index -> core_environment [label="getVersion", color="#F5A623"];
+  cli_analyze -> core_run_analyze [label="runFullAnalysis", color="#F5A623", penwidth=1.5];
+  cli_analyze -> core_lbug_adapter [label="closeLbug", color="#F5A623"];
+  cli_analyze -> core_ingestion_maxfile [label="getMaxFileSizeBannerMessage", color="#F5A623"];
+  cli_analyze -> core_embeddings_hf [label="isHfDownloadFailure", color="#F5A623"];
+  cli_setup -> core_environment [label="getVersion", color="#F5A623"];
+  cli_setup -> core_portability [label="getPortability", color="#F5A623"];
+  cli_serve -> core_logger [label="logger/flushLoggerSync", color="#F5A623"];
+  cli_serve -> server_api [label="createServer", color="#EF5350"];
+  cli_mcp -> mcp_stdio_context [label="installGlobalStdoutSentinel", color="#66BB6A"];
+  cli_mcp -> mcp_server [label="startMCPServer (dynamic)", color="#66BB6A"];
+  cli_mcp -> mcp_local_backend [label="LocalBackend (dynamic)", color="#66BB6A"];
+  cli_mcp -> core_logger [label="logger (dynamic)", color="#F5A623"];
+  cli_doctor -> core_platform_cap [label="getRuntimeCapabilities", color="#F5A623"];
+  cli_doctor -> core_embeddings_config [label="resolveEmbeddingConfig", color="#F5A623"];
+  cli_doctor -> core_embeddings_http [label="isHttpMode", color="#F5A623"];
+  cli_clean -> core_logger [label="logger", color="#F5A623"];
+  cli_remove -> core_logger [label="logger", color="#F5A623"];
+  cli_wiki -> core_wiki_generator [label="WikiGenerator", color="#F5A623"];
+  cli_wiki -> core_wiki_llm [label="resolveLLMConfig", color="#F5A623"];
+  cli_wiki -> core_wiki_cursor [label="detectCursorCLI", color="#F5A623"];
+  cli_wiki -> core_logger [label="logger", color="#F5A623"];
+  cli_augment -> core_augmentation [label="augment", color="#F5A623"];
+  cli_group -> core_logger [label="logger", color="#F5A623"];
+  cli_group -> core_group_storage [label="(dynamic)", color="#F5A623", style=dashed];
+  cli_group -> core_group_config [label="(dynamic)", color="#F5A623", style=dashed];
+  cli_group -> core_group_sync [label="syncGroup (dynamic)", color="#F5A623", style=dashed];
+  cli_group -> mcp_local_backend [label="LocalBackend (dynamic)", color="#66BB6A", style=dashed];
+  cli_skill_gen -> core_ingestion_community [label="CommunityNode", color="#F5A623"];
+  cli_skill_gen -> core_ingestion_process [label="ProcessNode", color="#F5A623"];
+  cli_skill_gen -> core_graph_types [label="KnowledgeGraph", color="#F5A623"];
+  cli_skill_gen -> types_pipeline [label="PipelineResult", color="#F5A623"];
+  cli_ai_context -> core_logger [label="logger", color="#F5A623"];
+  cli_ai_context -> core_portability [label="getPortability", color="#F5A623"];
+  cli_optional_grammars -> core_portability [label="getPortability", color="#F5A623"];
+  cli_tool -> mcp_local_backend [label="LocalBackend", color="#66BB6A"];
+  cli_eval_server -> mcp_local_backend [label="LocalBackend", color="#66BB6A"];
+  cli_eval_server -> core_logger [label="logger", color="#F5A623"];
+
+  // ===== Edges: CLI → Storage =====
+  cli_analyze -> storage_repo_manager [label="getStoragePaths/Registry-\nNameCollisionError/…", color="#9B59B6"];
+  cli_analyze -> storage_git [label="getGitRoot/hasGitDir", color="#9B59B6"];
+  cli_setup -> storage_repo_manager [label="getGlobalDir", color="#9B59B6"];
+  cli_list -> storage_repo_manager [label="listRegisteredRepos", color="#9B59B6", penwidth=1.5];
+  cli_status -> storage_repo_manager [label="findRepo/getStoragePaths/\nhasKuzuIndex", color="#9B59B6"];
+  cli_status -> storage_git [label="getCurrentCommit/isGitRepo/\ngetGitRoot", color="#9B59B6"];
+  cli_clean -> storage_repo_manager [label="findRepo/unregisterRepo/\nlistRegisteredRepos/…", color="#9B59B6"];
+  cli_remove -> storage_repo_manager [label="readRegistry/resolveRegistry\nEntry/unregisterRepo/…", color="#9B59B6"];
+  cli_wiki -> storage_repo_manager [label="getStoragePaths/loadMeta/\nloadCLIConfig/saveCLIConfig", color="#9B59B6"];
+  cli_wiki -> storage_git [label="getGitRoot/isGitRepo", color="#9B59B6"];
+  cli_publish -> storage_repo_manager [label="hasIndex", color="#9B59B6"];
+  cli_publish -> storage_git [label="getGitRoot/getRemoteOriginUrl/\ngetCurrentCommit", color="#9B59B6"];
+  cli_index_repo -> storage_repo_manager [label="getStoragePaths/loadMeta/\nregisterRepo/…", color="#9B59B6"];
+  cli_index_repo -> storage_git [label="getGitRoot/getRemoteUrl/isGitRepo", color="#9B59B6"];
+
+  // ===== Cross-layer utility edges =====
+  cli_analyze -> cli_cli_message [label="cliError", color="#666", style=dashed];
+  cli_analyze -> cli_optional_grammars [label="warnMissingOptionalGrammars", color="#666", style=dashed];
+  cli_serve -> cli_cli_message [label="cliError", color="#666", style=dashed];
+  cli_remove -> cli_cli_message [label="cliError", color="#666", style=dashed];
+  cli_publish -> cli_cli_message [label="cliInfo/cliError", color="#666", style=dashed];
+  cli_eval_server -> cli_cli_message [label="cliInfo/cliWarn", color="#666", style=dashed];
+  cli_tool -> cli_cli_message [label="cliError", color="#666", style=dashed];
+  cli_optional_grammars -> cli_cli_message [label="cliWarn", color="#666", style=dashed];
+  cli_cli_message -> core_logger [label="logger", color="#F5A623"];
+  cli_ai_context -> cli_skill_gen [label="GeneratedSkillInfo", color="#666", style=dashed];
+}

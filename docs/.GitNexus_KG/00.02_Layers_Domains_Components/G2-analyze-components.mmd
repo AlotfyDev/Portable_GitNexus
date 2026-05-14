@@ -1,0 +1,64 @@
+%% Analyze Domain — Component Dependency Graph
+%% Color: #D6EAF8 (light blue)
+%% Shows run-analyze.ts orchestrating 5 phases
+
+flowchart TB
+  classDef analyze fill:#D6EAF8,stroke:#2980B9,stroke-width:1px
+  classDef embed fill:#E8DAEF,stroke:#8E44AD,stroke-width:1px
+  classDef ext fill:#F0F0F0,stroke:#999,stroke-width:1px
+
+  subgraph AnalyzeCore["core/analyze/"]
+    types["types.ts\nAnalyzeOptions\nAnalyzeResult\nAnalyzeCallbacks"]:::analyze
+    phases["phases.ts\nPHASE_LABELS"]:::analyze
+    finalizer["finalizer.ts\ncountEmbeddings()\nbuildMeta()\ncomputeClusterSummary()\nFinalizeInput/Output"]:::analyze
+  end
+
+  subgraph Core["core/"]
+    run_analyze["run-analyze.ts\nrunFullAnalysis()"]:::analyze
+  end
+
+  phases --> types
+  finalizer --> types
+  run_analyze --> phases
+  run_analyze --> finalizer
+
+  subgraph Ext["Dependencies"]
+    direction TB
+    pipeline["ingestion/pipeline.ts\nrunPipelineFromRepo()"]:::ext
+    lbug["lbug/lbug-adapter.ts\ninitLbug, loadGraphToLbug\ngetLbugStats, closeLbug"]:::ext
+    fts["search/fts-indexes.ts\ncreateSearchFTSIndexes()"]:::ext
+    repoMgr["storage/repo-manager.ts\ngetStoragePaths, loadMeta\nsaveMeta, registerRepo"]:::ext
+    git["storage/git.ts\ngetCurrentCommit, hasGitDir\ngetInferredRepoName"]:::ext
+    schema["lbug/schema.ts\nSTALE_HASH_SENTINEL\nEMBEDDING_TABLE_NAME"]:::ext
+    embedMode["embedding-mode.ts\nderiveEmbeddingMode()"]:::ext
+    caps["platform/capabilities.ts\ngetRuntimeCapabilities()"]:::ext
+    aiCtx["cli/ai-context.ts\ngenerateAIContextFiles()"]:::ext
+  end
+
+  subgraph EmbedDomain["Embeddings Domain (cross-domain)"]
+    cacheLoader["embeddings/cache-loader.ts\nloadEmbeddingCache()\nrestoreCachedEmbeddings()"]:::embed
+    diag["embeddings/diagnostic.ts\nlogPerLabelNodeCounts()"]:::embed
+    httpCli["embeddings/http-client.ts\nisHttpMode()"]:::embed
+    embPipeline["embeddings/embedding-pipeline.ts\nrunEmbeddingPipeline()"]:::embed
+    srvMap["embeddings/server-mapping.ts\nreadServerMapping()"]:::embed
+  end
+
+  finalizer --> repoMgr
+  finalizer --> git
+  finalizer --> aiCtx
+  finalizer --> schema
+  finalizer --> caps
+
+  %% run-analyze orchestration: 5 phases
+  run_analyze -->|"Phase 1 (0-60%)\ningestion" pipeline
+  run_analyze -->|"Phase 2 (60-85%)\nLadybugDB" lbug
+  run_analyze -->|"Phase 3 (85-90%)\nFTS indexes" fts
+  run_analyze -->|"Phase 3.5\ncache restore" cacheLoader
+  run_analyze -->|"Phase 4 (90-98%)\nembeddings" embPipeline
+  run_analyze --> repoMgr
+  run_analyze --> git
+  run_analyze --> schema
+  run_analyze --> embedMode
+  run_analyze --> diag
+  run_analyze --> httpCli
+  run_analyze --> srvMap

@@ -1,0 +1,12 @@
+import { type SyntaxNode } from '../../utils/ast-helpers.js';
+import type { SemanticModel } from '../../model/index.js';
+import type { ClassNameLookup } from '../../type-extractors/types.js';
+import type { ClassDefRef } from '../types.js';
+export declare const clearClassNameCaches: () => void;
+export declare const findTypeIdentifierChild: (node: SyntaxNode) => SyntaxNode | null;
+export declare const findEnclosingClassName: (node: SyntaxNode) => string | undefined;
+export declare const findEnclosingParentClassName: (node: SyntaxNode) => string | undefined;
+export declare const createClassNameLookup: (localNames: Set<string>, model?: SemanticModel) => ClassNameLookup;
+export declare const lookupClassDefsByName: (model: SemanticModel, name: string, allowedTypes?: ReadonlySet<string>) => ClassDefRef[];
+export declare const createClassDefCache: (model?: SemanticModel) => (typeName: string) => ClassDefRef[];
+export declare const extractConstructorTypeName: (node: SyntaxNode, depth?: number) => string | undefined;

@@ -1,0 +1,133 @@
+digraph G {
+  rankdir=TB;
+  splines=polyline;
+  nodesep=0.5;
+  ranksep=0.6;
+  compound=true;
+  fontname="Consolas";
+  edge [fontname="Consolas" fontsize=9];
+
+  // ─── Color palette ──────────────────────────────────────────────────
+  // Config         → #95A5A6 (gray)
+  // lib            → #BDC3C7 (light gray)
+  // types          → #BDC3C7 (light gray)
+  // generated      → #D5D8DC (silver)
+  // core (ext)     → #5DADE2 (blue) — referenced by config/types
+  // shared (ext)   → #F1948A (salmon) — gitnexus-shared npm dep
+  // ─────────────────────────────────────────────────────────────────────
+
+  subgraph cluster_config {
+    label="Config Layer (src/config/)";
+    style="filled,rounded";
+    color="#95A5A6";
+    fillcolor="#F8F9F9";
+    fontcolor="#7F8C8D";
+    fontsize=12;
+
+    config_barrel [label="index.ts\n(barrel)" shape=box style="filled,rounded" fillcolor="#95A5A6" fontcolor=white];
+    config_types  [label="types.ts\n(40 lines)\nPortableConfig" shape=box style="filled,rounded" fillcolor="#AEB6BF"];
+    portable      [label="portable-config.ts\n(54 lines)\nloadPortableConfig()\nresolveConfigPath()\nDEFAULT_CONFIG" shape=box style="filled,rounded" fillcolor="#AEB6BF"];
+    ignore_svc    [label="ignore-service.ts\n(481 lines)\nshouldIgnorePath()\nloadIgnoreRules()\ncreateIgnoreFilter()" shape=box style="filled,rounded" fillcolor="#AEB6BF"];
+    sup_lang      [label="supported-languages.ts\n(13 lines)" shape=box style="filled,rounded" fillcolor="#AEB6BF"];
+
+    config_barrel -> config_types [style=dashed label="export type"];
+    config_barrel -> portable [style=dashed label="re-export"];
+  }
+
+  subgraph cluster_lib {
+    label="Library (src/lib/)";
+    style="filled,rounded";
+    color="#BDC3C7";
+    fillcolor="#F8F9F9";
+    fontcolor="#7F8C8D";
+    fontsize=12;
+
+    lib_utils [label="utils.ts\n(3 lines)\ngenerateId()" shape=box style="filled,rounded" fillcolor="#BDC3C7"];
+  }
+
+  subgraph cluster_types {
+    label="Types (src/types/)";
+    style="filled,rounded";
+    color="#BDC3C7";
+    fillcolor="#F8F9F9";
+    fontcolor="#7F8C8D";
+    fontsize=12;
+
+    pipeline_types [label="pipeline.ts\n(20 lines)\nPipelineResult" shape=box style="filled,rounded" fillcolor="#BDC3C7"];
+  }
+
+  subgraph cluster_generated {
+    label="Generated Constants (src/generated/)";
+    style="filled,rounded";
+    color="#D5D8DC";
+    fillcolor="#FDFEFE";
+    fontcolor="#7F8C8D";
+    fontsize=12;
+
+    gen_constants [label="constants.ts\n(21 lines)\nGITNEXUS_VERSION\nIS_PORTABLE_BUILD\nDEV_APP_ROOT_URL\nEMBEDDINGS_ENABLED" shape=box style="filled,rounded" fillcolor="#D5D8DC"];
+  }
+
+  subgraph cluster_cross_config {
+    label="Cross-layer imports from config → core";
+    style="filled,rounded,dashed";
+    color="#5DADE2";
+    fillcolor="#EBF5FB";
+    fontcolor="#2E86C1";
+    fontsize=11;
+
+    core_logger   [label="core/logger.ts" shape=box style="filled,rounded" fillcolor="#5DADE2" fontcolor=white];
+    core_portability [label="core/portability/\nindex.ts + contract.ts\n(13+70 lines)\ngetPortability()\nPortabilityContract" shape=box style="filled,rounded" fillcolor="#5DADE2" fontcolor=white];
+  }
+
+  subgraph cluster_shared {
+    label="External: gitnexus-shared";
+    style="filled,rounded,dashed";
+    color="#F1948A";
+    fillcolor="#FDEDEC";
+    fontcolor="#C0392B";
+    fontsize=11;
+
+    shared_langs [label="languages.ts\nSupportedLanguages\n(enum)" shape=box style="filled,rounded" fillcolor="#F1948A"];
+  }
+
+  subgraph cluster_cross_types {
+    label="Cross-layer imports from types → core";
+    style="filled,rounded,dashed";
+    color="#5DADE2";
+    fillcolor="#EBF5FB";
+    fontcolor="#2E86C1";
+    fontsize=11;
+
+    core_graph_types      [label="core/graph/types.ts\nKnowledgeGraph" shape=box style="filled,rounded" fillcolor="#5DADE2" fontcolor=white];
+    core_community_proc   [label="core/ingestion/\ncommunity-processor.ts\nCommunityDetectionResult" shape=box style="filled,rounded" fillcolor="#5DADE2" fontcolor=white];
+    core_process_proc     [label="core/ingestion/\nprocess-processor.ts\nProcessDetectionResult" shape=box style="filled,rounded" fillcolor="#5DADE2" fontcolor=white];
+  }
+
+  // ─── Config internal edges ─────────────────────────────────────────
+  portable -> config_types [label="imports PortableConfig" weight=5];
+  ignore_svc -> core_logger [label="imports logger" color="#5DADE2" penwidth=2 weight=5];
+  portable -> core_portability [label="imports getPortability()" color="#5DADE2" penwidth=2 weight=5];
+  sup_lang -> shared_langs [label="re-exports SupportedLanguages" color="#F1948A" penwidth=2 weight=5];
+
+  // ─── Types internal edges ──────────────────────────────────────────
+  pipeline_types -> core_graph_types [label="imports KnowledgeGraph" color="#5DADE2" penwidth=2 weight=5];
+  pipeline_types -> core_community_proc [label="imports CommunityDetectionResult" color="#5DADE2" penwidth=2 weight=5];
+  pipeline_types -> core_process_proc [label="imports ProcessDetectionResult" color="#5DADE2" penwidth=2 weight=5];
+
+  // ─── Generated dependencies ────────────────────────────────────────
+  core_portability -> gen_constants [label="imports IS_PORTABLE_BUILD\nDEV_APP_ROOT_URL" color="#D5D8DC" weight=5];
+
+  // ─── Legend ────────────────────────────────────────────────────────
+  subgraph cluster_legend {
+    label="Legend";
+    style="filled,rounded";
+    color="#ABB2B9";
+    fillcolor="#FDFEFE";
+    fontsize=11;
+
+    legend_config [label="Config layer" shape=box style=filled fillcolor="#95A5A6" fontcolor=white];
+    legend_lib [label="lib/types/generated" shape=box style=filled fillcolor="#BDC3C7"];
+    legend_cross [label="Cross-layer dep" shape=box style=filled fillcolor="#5DADE2" fontcolor=white];
+    legend_shared [label="npm dep" shape=box style=filled fillcolor="#F1948A"];
+  }
+}

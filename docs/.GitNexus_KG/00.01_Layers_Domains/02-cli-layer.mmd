@@ -1,0 +1,107 @@
+%% GitNexus CLI Layer — Architecture & Internal Dependencies
+%% Colors: blue=CLI, green=Server/MCP, orange=Core, purple=Storage, gray=Infra
+
+graph TB
+  subgraph CLI["CLI Layer (src/cli/)"]
+    style CLI fill:#2A2A3E,stroke:#4A90D9,color:#CDD6F4
+
+    index("index.ts (entry)"):::entry
+    analyze("analyze.ts"):::cmd
+    index_repo("index-repo.ts"):::cmd
+    status("status.ts"):::cmd
+    list("list.ts"):::cmd
+    remove("remove.ts"):::cmd
+    clean("clean.ts"):::cmd
+    wiki_("wiki.ts"):::cmd
+    publish("publish.ts"):::cmd
+    setup("setup.ts"):::cmd
+    serve("serve.ts"):::cmd
+    tool_("tool.ts"):::cmd
+    mcp_("mcp.ts"):::cmd
+    eval_server("eval-server.ts"):::cmd
+    group_("group.ts"):::cmd
+    augment("augment.ts"):::cmd
+    doctor("doctor.ts"):::cmd
+    skill_gen("skill-gen.ts"):::cmd
+    ai_context("ai-context.ts"):::cmd
+    cli_message("cli-message.ts"):::helper
+    lazy_action("lazy-action.ts"):::helper
+    optional_grammars("optional-grammars.ts"):::helper
+
+    index -->|createLazyAction| lazy_action
+    index -->|registerGroupCommands| group_
+    analyze -->|warnMissingOptionalGrammars| optional_grammars
+    analyze -->|cliError| cli_message
+    eval_server -->|cliInfo, cliWarn| cli_message
+    publish -->|cliInfo, cliError| cli_message
+    remove -->|cliError| cli_message
+    serve -->|cliError| cli_message
+    tool_ -->|cliError| cli_message
+    optional_grammars -->|cliWarn| cli_message
+    ai_context -->|GeneratedSkillInfo| skill_gen
+  end
+
+  %% Core dependencies
+  analyze -.->|runFullAnalysis| run_analyze("core/run-analyze.ts"):::core
+  analyze -.->|logger| logger_core("core/logger.ts"):::core
+  analyze -.->|closeLbug| close_lbug("core/lbug/lbug-adapter.ts"):::core
+  analyze -.->|isHfDownloadFailure| hf_env("core/embeddings/hf-env.ts"):::core
+  analyze -.->|getMaxFileSizeBannerMessage| max_file_size("core/ingestion/utils/max-file-size.ts"):::core
+  augment -.->|augment| augment_engine("core/augmentation/engine.ts"):::core
+  clean -.->|logger| logger_core
+  remove -.->|logger| logger_core
+  group_ -.->|logger| logger_core
+  cli_message -.->|logger| logger_core
+  ai_context -.->|logger| logger_core
+  wiki_ -.->|logger| logger_core
+  serve -.->|logger, flushLoggerSync| logger_core
+  eval_server -.->|logger| logger_core
+  doctor -.->|resolveEmbeddingConfig| resolve_embedding_config("core/embeddings/config.ts"):::core
+  doctor -.->|isHttpMode| is_http_mode("core/embeddings/http-client.ts"):::core
+  doctor -.->|getRuntimeCapabilities| runtime_capabilities("core/platform/capabilities.ts"):::core
+  setup -.->|getVersion| get_version("core/environment.ts"):::core
+  index -.->|getVersion| get_version
+  setup -.->|getPortability| portability("core/portability/index.ts"):::core
+  ai_context -.->|getPortability| portability
+  optional_grammars -.->|getPortability| portability
+  wiki_ -.->|WikiGenerator, WikiOptions| wiki_generator("core/wiki/generator.ts"):::core
+  wiki_ -.->|resolveLLMConfig, LLMProvider| llm_client("core/wiki/llm-client.ts"):::core
+  wiki_ -.->|detectCursorCLI| cursor_client("core/wiki/cursor-client.ts"):::core
+  skill_gen -.->|PipelineResult| pipeline_result("types/pipeline.ts"):::infra
+  skill_gen -.->|CommunityNode| community_processor("core/ingestion/community-processor.ts"):::core
+  skill_gen -.->|ProcessNode| process_processor("core/ingestion/process-processor.ts"):::core
+  skill_gen -.->|KnowledgeGraph| graph_types("core/graph/types.ts"):::core
+
+  %% Storage dependencies
+  analyze -.->|readRegistry, etc| repo_manager("storage/repo-manager.ts"):::storage
+  analyze -.->|getGitRoot, hasGitDir| git_storage("storage/git.ts"):::storage
+  clean -.->|cleanupOldKuzuFiles, etc| repo_manager
+  index_repo -.->|registerRepo, etc| repo_manager
+  index_repo -.->|getGitRoot, getRemoteUrl| git_storage
+  list -.->|listRegisteredRepos| repo_manager
+  publish -.->|getGitRoot, getRemoteOriginUrl| git_storage
+  publish -.->|hasIndex| repo_manager
+  remove -.->|unregisterRepo, etc| repo_manager
+  setup -.->|getGlobalDir| repo_manager
+  status -.->|findRepo, getStoragePaths| repo_manager
+  status -.->|getCurrentCommit, isGitRepo| git_storage
+  wiki_ -.->|getGitRoot, isGitRepo| git_storage
+  wiki_ -.->|findRepo, etc| repo_manager
+
+  %% Server/MCP dependencies
+  serve -.->|createServer| server_api("server/api.ts"):::server
+  eval_server -.->|LocalBackend| local_backend("mcp/local/local-backend.ts"):::mcp
+  tool_ -.->|LocalBackend| local_backend
+  mcp_ -.->|installGlobalStdoutSentinel| stdio_context("mcp/stdio-context.ts"):::mcp
+
+  %% Infra dependencies
+  optional_grammars -.->|DEV_APP_ROOT_URL| generated_constants("generated/constants.ts"):::infra
+
+  classDef entry fill:#4A90D9,stroke:#4A90D9,color:#FFFFFF
+  classDef cmd fill:#5BA3E6,stroke:#4A90D9,color:#FFFFFF
+  classDef helper fill:#6BAFE6,stroke:#4A90D9,color:#FFFFFF,stroke-dasharray: 5 5
+  classDef core fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+  classDef storage fill:#9B59B6,stroke:#9B59B6,color:#FFFFFF
+  classDef server fill:#50B86C,stroke:#50B86C,color:#FFFFFF
+  classDef mcp fill:#50B86C,stroke:#50B86C,color:#FFFFFF
+  classDef infra fill:#95A5A6,stroke:#95A5A6,color:#FFFFFF

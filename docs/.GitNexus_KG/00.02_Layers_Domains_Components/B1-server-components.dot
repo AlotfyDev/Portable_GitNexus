@@ -1,0 +1,221 @@
+digraph Server_Layer {
+  rankdir=TB; splines=ortho; compound=true; fontname="Consolas";
+  node [shape=box, style="rounded,filled", fontname="Consolas", fontsize=10];
+  edge [fontname="Consolas", fontsize=9, arrowsize=0.7];
+
+  // ===== Color scheme =====
+  // green (#50B86C)  — Server route files
+  // lightgreen (#B8F0C4) — Server middleware
+  // orange (#F5A623) — Core dependencies (external)
+  // purple (#9B59B6) — Storage dependencies (external)
+  // lightgray — barrel files
+
+  // ===== Subgraph: Server Layer =====
+  subgraph cluster_server {
+    label="Server Layer (src/server/)"; fontsize=12; style=filled; fillcolor="#F0FFF0";
+    color="#50B86C";
+
+    // ── Entry Point ──
+    srv_api [label="api.ts\n(createServer)", fillcolor="#50B86C", fontcolor="white"];
+
+    // ── Subgraph: Middleware ──
+    subgraph cluster_middleware {
+      label="middleware/"; fontsize=11; style=filled; fillcolor="#E8F8E8";
+      color="#90C890";
+
+      mw_index [label="index.ts\n(mountMiddleware)", fillcolor="#B8F0C4", style="dashed"];
+      mw_cors [label="cors.ts\n(isAllowedOrigin)", fillcolor="#B8F0C4"];
+      mw_repo_resolver [label="repo-resolver.ts\n(createRepoResolver/\ncreateRepoLockManager/requestedRepo)", fillcolor="#B8F0C4"];
+      mw_error_handler [label="error-handler.ts\n(statusFromError/\nglobalErrorHandler)", fillcolor="#B8F0C4"];
+    }
+
+    // ── Subgraph: Routes ──
+    subgraph cluster_routes {
+      label="routes/"; fontsize=11; style=filled; fillcolor="#E8F8E8";
+      color="#90C890";
+
+      r_health [label="health.ts\n(mountHealth)", fillcolor="#50B86C", fontcolor="white"];
+      r_repos [label="repos.ts\n(mountRepos)", fillcolor="#50B86C", fontcolor="white"];
+      r_graph [label="graph.ts\n(mountGraph)", fillcolor="#50B86C", fontcolor="white"];
+      r_query [label="query.ts\n(mountQuery)", fillcolor="#50B86C", fontcolor="white"];
+      r_search [label="search.ts\n(mountSearch)", fillcolor="#50B86C", fontcolor="white"];
+      r_file [label="file.ts\n(mountFile/handleFileRequest)", fillcolor="#50B86C", fontcolor="white"];
+      r_processes [label="processes.ts\n(mountProcesses)", fillcolor="#50B86C", fontcolor="white"];
+      r_analyze [label="analyze.ts\n(mountAnalyze)", fillcolor="#50B86C", fontcolor="white"];
+      r_embedding [label="embedding.ts\n(mountEmbedding)", fillcolor="#50B86C", fontcolor="white"];
+      r_index [label="index.ts\n(mountAllRoutes)", fillcolor="#B8F0C4", style="dashed"];
+    }
+
+    // ── Subgraph: Support files ──
+    subgraph cluster_helpers {
+      label="helpers/"; fontsize=11; style=filled; fillcolor="#F0F0F0";
+      color="#AAA";
+
+      s_config [label="config.ts\n(ServerConfig/loadConfig)", fillcolor="#E0E0E0"];
+      s_types [label="types.ts\n(ServerDependencies)", fillcolor="#E0E0E0", style="dashed"];
+      s_shutdown [label="shutdown.ts\n(registerGracefulShutdown)", fillcolor="#E0E0E0"];
+      s_validation [label="validation.ts\n(assertString/createRouteLimiter/…)", fillcolor="#E0E0E0"];
+      s_streaming [label="streaming.ts\n(streamGraphNdjson/mountSSEProgress)", fillcolor="#E0E0E0"];
+      s_web_ui [label="web-ui.ts\n(registerWebUI/resolveWebDistDir)", fillcolor="#E0E0E0"];
+      s_mcp_http [label="mcp-http.ts\n(mountMCPEndpoints)", fillcolor="#E0E0E0"];
+      s_git_clone [label="git-clone.ts\n(cloneOrPull/extractRepoName/…)", fillcolor="#E0E0E0"];
+      s_analyze_job [label="analyze-job.ts\n(JobManager)", fillcolor="#E0E0E0"];
+      s_analyze_worker [label="analyze-worker.ts\n(fork entry → runFullAnalysis)", fillcolor="#E0E0E0"];
+    }
+  }
+
+  // ===== External =====
+  subgraph cluster_core {
+    label="Core Layer (src/core/)"; fontsize=12; style=filled; fillcolor="#FFF8E1";
+    color="#E6A817";
+    node [fillcolor="#F5A623", fontcolor="white"];
+
+    core_env [label="environment.ts\n(getVersion)"];
+    core_logger [label="logger.ts\n(logger)"];
+    core_lbug_adapter [label="lbug/lbug-adapter.ts\n(withLbugDb/executeQuery/\ncloseLbug/streamQuery/…)"];
+    core_lbug_pool [label="lbug/pool-adapter.ts\n(isWriteQuery)"];
+    core_portability [label="portability/index.ts\n(getPortability)"];
+    core_run_analyze [label="run-analyze.ts\n(runFullAnalysis)"];
+    core_hybrid_search [label="search/hybrid-search.ts\n(hybridSearch)"];
+    core_bm25 [label="search/bm25-index.ts\n(searchFTSFromLbug)"];
+    core_embeddings_pipe [label="embeddings/\nembedding-pipeline.ts"];
+  }
+
+  subgraph cluster_storage {
+    label="Storage Layer (src/storage/)"; fontsize=12; style=filled; fillcolor="#F3E5F5";
+    color="#7B1FA2";
+    node [fillcolor="#9B59B6", fontcolor="white"];
+
+    sto_repomgr [label="repo-manager.ts\n(listRegisteredRepos/loadMeta/…)"];
+  }
+
+  subgraph cluster_mcp {
+    label="MCP Layer (src/mcp/)"; fontsize=12; style=filled; fillcolor="#E8F5E9";
+    color="#388E3C";
+    node [fillcolor="#66BB6A", fontcolor="white"];
+
+    mcp_local_backend [label="local/local-backend.ts\n(LocalBackend)"];
+    mcp_server [label="server.ts\n(createMCPServer)"];
+  }
+
+  subgraph cluster_config {
+    label="Config Layer (src/config/)"; fontsize=12; style=filled; fillcolor="#FCE4EC";
+    color="#C62828";
+    node [fillcolor="#EF5350", fontcolor="white"];
+    cfg_portable [label="index.ts\n(loadPortableConfig)"];
+  }
+
+  subgraph cluster_shared {
+    label="gitnexus-shared"; fontsize=12; style=filled; fillcolor="#E0F0FF";
+    color="#2979FF";
+    node [fillcolor="#82B1FF", fontcolor="white"];
+    shared_node_tables [label="NODE_TABLES/\nGraphNode/GraphRelationship"];
+  }
+
+  // ===== Edges: API → Boot chain =====
+  srv_api -> s_config [label="DEFAULT_SERVER_CONFIG", color="#666"];
+  srv_api -> mw_index [label="mountMiddleware", color="#50B86C", penwidth=1.5];
+  srv_api -> r_index [label="mountAllRoutes", color="#50B86C", penwidth=1.5];
+  srv_api -> s_shutdown [label="registerGracefulShutdown", color="#666"];
+  srv_api -> s_web_ui [label="registerWebUI/resolveWebDistDir", color="#666"];
+  srv_api -> s_mcp_http [label="mountMCPEndpoints", color="#666"];
+  srv_api -> mcp_local_backend [label="LocalBackend", color="#66BB6A"];
+  srv_api -> s_analyze_job [label="JobManager (× 2)", color="#666"];
+  srv_api -> mw_error_handler [label="globalErrorHandler", color="#50B86C"];
+
+  // ===== Middleware internal =====
+  mw_index -> mw_cors [label="isAllowedOrigin", color="#50B86C"];
+  mw_repo_resolver -> sto_repomgr [label="listRegisteredRepos", color="#9B59B6"];
+  mw_repo_resolver -> core_logger [label="logger", color="#F5A623"];
+  mw_error_handler -> s_validation [label="BadRequestError", color="#666"];
+  mw_error_handler -> core_logger [label="logger", color="#F5A623"];
+
+  // ===== Route barrel → individual routes =====
+  r_index -> r_health [label="mountHealth", color="#50B86C"];
+  r_index -> r_repos [label="mountRepos", color="#50B86C"];
+  r_index -> r_graph [label="mountGraph", color="#50B86C"];
+  r_index -> r_query [label="mountQuery", color="#50B86C"];
+  r_index -> r_search [label="mountSearch", color="#50B86C"];
+  r_index -> r_file [label="mountFile", color="#50B86C"];
+  r_index -> r_processes [label="mountProcesses", color="#50B86C"];
+  r_index -> r_analyze [label="mountAnalyze", color="#50B86C"];
+  r_index -> r_embedding [label="mountEmbedding", color="#50B86C"];
+
+  // ===== Routes → Core =====
+  r_health -> core_env [label="getVersion", color="#F5A623"];
+
+  r_repos -> mw_repo_resolver [label="createRepoResolver/\ncreateRepoLockManager/requestedRepo", color="#50B86C"];
+  r_repos -> sto_repomgr [label="listRegisteredRepos/loadMeta/\ngetStoragePath", color="#9B59B6", penwidth=1.5];
+  r_repos -> core_lbug_adapter [label="closeLbug", color="#F5A623"];
+  r_repos -> s_git_clone [label="getCloneDir", color="#666"];
+
+  r_graph -> mw_repo_resolver [label="createRepoResolver/requestedRepo", color="#50B86C"];
+  r_graph -> core_lbug_adapter [label="withLbugDb/executeQuery", color="#F5A623", penwidth=1.5];
+  r_graph -> s_streaming [label="streamGraphNdjson/\nClientDisconnectedError", color="#666"];
+  r_graph -> shared_node_tables [label="NODE_TABLES/types", color="#82B1FF"];
+
+  r_query -> mw_repo_resolver [label="createRepoResolver/requestedRepo", color="#50B86C"];
+  r_query -> core_lbug_adapter [label="withLbugDb/executeQuery", color="#F5A623", penwidth=1.5];
+  r_query -> core_lbug_pool [label="isWriteQuery", color="#F5A623"];
+
+  r_search -> mw_repo_resolver [label="createRepoResolver/requestedRepo", color="#50B86C"];
+  r_search -> core_lbug_adapter [label="withLbugDb/executeQuery/\nexecutePrepared", color="#F5A623"];
+  r_search -> core_hybrid_search [label="hybridSearch", color="#F5A623"];
+  r_search -> core_bm25 [label="searchFTSFromLbug", color="#F5A623"];
+  r_search -> shared_node_tables [label="NODE_TABLES", color="#82B1FF"];
+  r_search -> core_embeddings_pipe [label="(dynamic) semanticSearch", color="#F5A623", style=dashed];
+
+  r_file -> mw_repo_resolver [label="createRepoResolver/requestedRepo", color="#50B86C"];
+  r_file -> s_validation [label="createRouteLimiter/assertString/\nescapeRegExp", color="#666"];
+  r_file -> mw_error_handler [label="statusFromError", color="#50B86C"];
+  r_file -> core_lbug_adapter [label="withLbugDb/executeQuery", color="#F5A623"];
+
+  r_processes -> mw_repo_resolver [label="requestedRepo", color="#50B86C"];
+  r_processes -> mw_error_handler [label="statusFromError", color="#50B86C"];
+  r_processes -> mcp_local_backend [label="backend.queryProcesses/…", color="#66BB6A", penwidth=1.5];
+
+  r_analyze -> s_validation [label="createRouteLimiter", color="#666"];
+  r_analyze -> s_streaming [label="mountSSEProgress", color="#666"];
+  r_analyze -> s_analyze_job [label="jobManager", color="#666"];
+  r_analyze -> s_git_clone [label="extractRepoName/getCloneDir/\ncloneOrPull", color="#666"];
+  r_analyze -> mw_repo_resolver [label="createRepoLockManager", color="#50B86C"];
+  r_analyze -> core_portability [label="getPortability", color="#F5A623"];
+  r_analyze -> core_logger [label="logger", color="#F5A623"];
+  r_analyze -> sto_repomgr [label="getStoragePath", color="#9B59B6"];
+
+  r_embedding -> mw_repo_resolver [label="createRepoResolver/\ncreateRepoLockManager/requestedRepo", color="#50B86C"];
+  r_embedding -> s_validation [label="createRouteLimiter", color="#666"];
+  r_embedding -> s_streaming [label="mountSSEProgress", color="#666"];
+  r_embedding -> core_lbug_adapter [label="withLbugDb/executeQuery/\nexecuteWithReusedStatement/flushWAL", color="#F5A623"];
+  r_embedding -> core_embeddings_pipe [label="(dynamic) runEmbeddingPipeline", color="#F5A623", style=dashed];
+  r_embedding -> s_analyze_job [label="embedJobManager", color="#666"];
+
+  // ===== Support → External =====
+  s_config -> cfg_portable [label="loadPortableConfig", color="#EF5350"];
+  s_shutdown -> core_lbug_adapter [label="closeLbug", color="#F5A623"];
+  s_shutdown -> core_logger [label="logger/flushLoggerSync", color="#F5A623"];
+  s_streaming -> core_lbug_adapter [label="streamQuery", color="#F5A623"];
+  s_streaming -> shared_node_tables [label="NODE_TABLES/types", color="#82B1FF"];
+  s_web_ui -> core_portability [label="getPortability", color="#F5A623"];
+  s_web_ui -> s_validation [label="createRouteLimiter", color="#666"];
+  s_web_ui -> core_logger [label="logger", color="#F5A623"];
+  s_mcp_http -> mcp_server [label="createMCPServer", color="#66BB6A"];
+  s_mcp_http -> mcp_local_backend [label="LocalBackend", color="#66BB6A"];
+  s_mcp_http -> core_logger [label="logger", color="#F5A623"];
+  s_git_clone -> core_logger [label="logger", color="#F5A623"];
+  s_analyze_worker -> core_run_analyze [label="runFullAnalysis", color="#F5A623", penwidth=1.5];
+  s_analyze_worker -> core_lbug_adapter [label="closeLbug", color="#F5A623"];
+
+  // ===== Legend =====
+  subgraph cluster_legend {
+    label="Legend"; fontsize=10; style=dashed; color="#666";
+    node [fontsize=9, shape=box, style="rounded,filled"];
+    l_route [label="Route File", fillcolor="#50B86C", fontcolor="white"];
+    l_mw [label="Middleware", fillcolor="#B8F0C4"];
+    l_core [label="Core Dep", fillcolor="#F5A623", fontcolor="white"];
+    l_storage [label="Storage Dep", fillcolor="#9B59B6", fontcolor="white"];
+    l_mcp [label="MCP Dep", fillcolor="#66BB6A", fontcolor="white"];
+    l_barrel [label="Barrel (< 827 bytes)", style="dashed", fillcolor="#E0E0E0"];
+    l_shared [label="Shared Dep", fillcolor="#82B1FF", fontcolor="white"];
+  }
+}

@@ -1,0 +1,126 @@
+digraph EmbeddingsComponents {
+  rankdir=LR;
+  splines=ortho;
+  node [shape=box, style="filled,rounded", fillcolor="#E8DAEF", fontname="Consolas", fontsize=10];
+  edge [color="#555555", fontname="Consolas", fontsize=9];
+
+  // ── Subgraph: Core Embeddings files ──
+  subgraph cluster_embeddings {
+    label="core/embeddings/";
+    fillcolor="#F5EEF8";
+    style=filled;
+    color="#D2B4DE";
+
+    // Barrel file with dashed border
+    index [label="index.ts\n(re-export barrel)", fillcolor="#E8DAEF", style="dashed,rounded"];
+
+    // Regular files
+    types [label="types.ts\nEmbeddingConfig\nEmbeddableNode\nCachedEmbedding\nEmbeddingContext\nModelProgress\nSemanticSearchResult\nDEFAULT_EMBEDDING_CONFIG\nisShortLabel / isChunkableLabel\nSTRUCTURAL_LABELS\nCHUNKING_RULES\ndedupBestChunks\ncollectBestChunks"];
+    provider [label="provider.ts\nEmbeddingProvider (interface)\nWasmPortableProvider\nCpuPortableProvider\nNativeNodeProvider\nselectProvider()\ngetAvailableProviders()"];
+    embedder [label="embedder.ts\nEmbedder (class)\ninitEmbedder()\nembedText() / embedBatch()\ngetEmbedder()\ndisposeEmbedder()\nisEmbedderReady()\ngetEmbeddingDimensions()\ngetCurrentDevice()\nembeddingToArray()"];
+    config [label="config.ts\nresolveEmbeddingConfig()\nparseDevice()"];
+    http [label="http-client.ts\nhttpEmbed()\nhttpEmbedQuery()\nisHttpMode()\ngetHttpDimensions()"];
+    hfenv [label="hf-env.ts\napplyHfEnvOverrides()\nisHfDownloadFailure()\nwithHfDownloadRetry()"];
+    pipeline [label="embedding-pipeline.ts\nrunEmbeddingPipeline()\nsemanticSearch()\nsemanticSearchWithContext()\ncontentHashForNode()\nbatchInsertEmbeddings()\nEMBEDDING_TEXT_VERSION"];
+    textgen [label="text-generator.ts\ngenerateEmbeddingText()\nextractDeclarationOnly()\ntruncateDescription()"];
+    chunker [label="chunker.ts\nchunkNode()"];
+    charChunk [label="character-chunk.ts\ncharacterChunk()"];
+    lineIdx [label="line-index.ts\nbuildLineIndex()\nresolveChunkLines()"];
+    astUtils [label="ast-utils.ts\nensureAndParse()\nfindDeclarationNode()\nfindFunctionNode()"];
+    structExt [label="structural-extractor.ts\nextractStructuralNames()"];
+    exactSearch [label="exact-search.ts\nrankExactEmbeddingRows()\ncosineDistance()"];
+    cacheLoader [label="cache-loader.ts\nloadEmbeddingCache()\nrestoreCachedEmbeddings()"];
+    diagnostic [label="diagnostic.ts\nlogPerLabelNodeCounts()"];
+    serverMap [label="server-mapping.ts\nreadServerMapping()"];
+  }
+
+  // ── External dependency nodes (gray) ──
+  node [fillcolor="#F0F0F0", style="rounded"];
+
+  portability [label="portability/index.ts\ngetPortability()"];
+  portable_cfg [label="config/portable-config.ts\nloadPortableConfig()\nresolveConfigPath()"];
+  platform_caps [label="platform/capabilities.ts\ndefaultEmbeddingThreads()\ngetExactScanLimit()"];
+  logger [label="logger.ts"];
+  lbug_adapter [label="lbug/lbug-adapter.ts\nloadCachedEmbeddings()"];
+  lbug_repo [label="lbug/repository/\nembedding-repository.ts\nEmbeddingRepository"];
+  vector_registry [label="vector-store/registry.ts\ncreateEmbeddingRepository()"];
+  ingestion_idx [label="ingestion/languages/index.ts\ngetProviderForFile()"];
+  method_types [label="ingestion/method-types.ts\nMethodExtractorContext"];
+  field_types [label="ingestion/field-types.ts\nFieldExtractorContext"];
+  lang_provider [label="ingestion/\nlanguage-provider.ts\nLanguageProvider"];
+  type_env [label="ingestion/type-env.ts\nbuildTypeEnv()"];
+  shared_types [label="gitnexus-shared\nSupportedLanguages\nCircuitOpenError\nresilientFetch"];
+  tree_sitter [label="tree-sitter/parser-loader.ts\ncreateParserForLanguage()\nisLanguageAvailable()"];
+  sync_consts [label="generated/constants.js\nDEV_APP_ROOT_URL"];
+
+  // ── Internal import edges ──
+  config -> types [label="DEFAULT_EMBEDDING_CONFIG, EmbeddingConfig"];
+  config -> platform_caps [label="defaultEmbeddingThreads()"];
+  config -> portable_cfg [label="loadPortableConfig()"];
+
+  provider -> types [label="DEFAULT_EMBEDDING_CONFIG, EmbeddingConfig"];
+  provider -> portability [label="getPortability()"];
+  provider -> portable_cfg [label="loadPortableConfig(), resolveConfigPath()"];
+
+  embedder -> types [label="DEFAULT_EMBEDDING_CONFIG, EmbeddingConfig, ModelProgress"];
+  embedder -> http [label="isHttpMode(), getHttpDimensions(), httpEmbed()"];
+  embedder -> config [label="resolveEmbeddingConfig()"];
+  embedder -> hfenv [label="applyHfEnvOverrides(), isHfDownloadFailure(), withHfDownloadRetry()"];
+  embedder -> provider [label="selectProvider(), Device, EmbeddingProvider"];
+  embedder -> portability [label="getPortability()"];
+  embedder -> logger;
+  embedder -> sync_consts [label="DEV_APP_ROOT_URL"];
+
+  pipeline -> embedder [label="initEmbedder(), embedBatch(), embedText(), embeddingToArray(), isEmbedderReady()"];
+  pipeline -> textgen [label="generateEmbeddingText()"];
+  pipeline -> chunker [label="chunkNode()"];
+  pipeline -> structExt [label="extractStructuralNames()"];
+  pipeline -> types [label="EmbeddingProgress, EmbeddingConfig, EmbeddableNode, isShortLabel, STRUCTURAL_LABELS, collectBestChunks"];
+  pipeline -> config [label="resolveEmbeddingConfig()"];
+  pipeline -> exactSearch [label="rankExactEmbeddingRows(), ExactEmbeddingRow"];
+  pipeline -> lbug_repo [label="EmbeddingRepository, EMBEDDING_TABLE_NAME, STALE_HASH_SENTINEL, EMBEDDING_INDEX_NAME, loadVectorExtension()"];
+  pipeline -> platform_caps [label="getExactScanLimit()"];
+  pipeline -> vector_registry [label="createEmbeddingRepository()"];
+  pipeline -> logger;
+
+  structExt -> astUtils [label="ensureAndParse(), findDeclarationNode()"];
+  structExt -> ingestion_idx [label="getProviderForFile()"];
+  structExt -> method_types [label="MethodExtractorContext, ExtractedMethods"];
+  structExt -> field_types [label="FieldExtractorContext, ExtractedFields"];
+  structExt -> lang_provider [label="LanguageProvider"];
+  structExt -> type_env [label="buildTypeEnv()"];
+  structExt -> shared_types [label="SupportedLanguages"];
+
+  chunker -> charChunk [label="characterChunk(), Chunk"];
+  chunker -> astUtils [label="ensureAndParse(), findDeclarationNode(), findFunctionNode()"];
+  chunker -> lineIdx [label="buildLineIndex(), resolveChunkLines()"];
+  chunker -> types [label="CHUNKING_RULES, CHUNK_MODE_*, ChunkingRule"];
+
+  charChunk -> lineIdx [label="buildLineIndex(), resolveChunkLines()"];
+
+  astUtils -> shared_types [label="getLanguageFromFilename()"];
+  astUtils -> tree_sitter [label="createParserForLanguage(), isLanguageAvailable(), resolveLanguageKey()"];
+
+  textgen -> types [label="EmbeddableNode, EmbeddingConfig, CHUNKING_RULES, DEFAULT_EMBEDDING_CONFIG, STRUCTURAL_TEXT_MODE_DECLARATION, isShortLabel"];
+
+  cacheLoader -> types [label="CachedEmbedding"];
+  cacheLoader -> lbug_adapter [label="loadCachedEmbeddings()"];
+  cacheLoader -> pipeline [label="batchInsertEmbeddings()"];
+
+  http -> shared_types;
+
+  hfenv -> shared_types;
+
+  // Barrel re-exports
+  index -> types;
+  index -> http;
+  index -> embedder;
+  index -> textgen;
+  index -> pipeline;
+
+  // Unconnected but in directory:
+  // exact-search.ts (standalone — no internal imports)
+  // diagnostic.ts (standalone — executeQuery param)
+  // server-mapping.ts (standalone — fs/path/os only)
+  // line-index.ts (standalone)
+}

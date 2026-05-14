@@ -1,0 +1,140 @@
+digraph Server_Layer {
+  rankdir=TB;
+  label="GitNexus Server Layer — Architecture & Internal Dependencies";
+  fontsize=16;
+  fontname="Consolas";
+  compound=true;
+  bgcolor="#1E1E2E";
+  fontcolor="#CDD6F4";
+  edge [fontname="Consolas", fontsize=9];
+  node [fontname="Consolas", fontsize=10, style="filled", shape="box"];
+
+  // Colors: green = Server/MCP, orange = Core, purple = Storage
+
+  subgraph cluster_server {
+    label="Server Layer (src/server/)";
+    fontsize=14;
+    fontcolor="#50B86C";
+    style="filled";
+    color="#50B86C";
+    fillcolor="#1E2E2E";
+
+    // Entry / API
+    api [label="api.ts", fillcolor="#50B86C", fontcolor="#FFFFFF", shape="diamond"];
+
+    // Routes
+    subgraph cluster_routes {
+      label="Routes";
+      fontsize=12;
+      fontcolor="#50B86C";
+      style="filled";
+      color="#3A6B4C";
+      fillcolor="#1E2E2E";
+
+      routes_index [label="routes/index.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+      analyze_route [label="routes/analyze.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+      embedding_route [label="routes/embedding.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+      file_route [label="routes/file.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+      graph_route [label="routes/graph.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+      health_route [label="routes/health.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+      processes_route [label="routes/processes.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+      query_route [label="routes/query.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+      repos_route [label="routes/repos.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+      search_route [label="routes/search.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+    }
+
+    // Middleware
+    subgraph cluster_middleware {
+      label="Middleware";
+      fontsize=12;
+      fontcolor="#50B86C";
+      style="filled";
+      color="#3A6B4C";
+      fillcolor="#1E2E2E";
+
+      middleware_index [label="middleware/index.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF", style="dashed"];
+      cors [label="middleware/cors.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+      error_handler [label="middleware/error-handler.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+      repo_resolver [label="middleware/repo-resolver.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+    }
+
+    // Other utilities
+    streaming [label="streaming.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF", style="dashed"];
+    validation [label="validation.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF", style="dashed"];
+    types_srv [label="types.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF", style="dashed"];
+    config_srv [label="config.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF", style="dashed"];
+    shutdown [label="shutdown.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+    web_ui [label="web-ui.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+    analyze_job [label="analyze-job.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+    analyze_worker [label="analyze-worker.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+    git_clone [label="git-clone.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+    mcp_http [label="mcp-http.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+
+    // Internal edges
+    routes_index -> health_route [label="mountHealth", color="#50B86C"];
+    routes_index -> repos_route [label="mountRepos", color="#50B86C"];
+    routes_index -> graph_route [label="mountGraph", color="#50B86C"];
+    routes_index -> query_route [label="mountQuery", color="#50B86C"];
+    routes_index -> search_route [label="mountSearch", color="#50B86C"];
+    routes_index -> file_route [label="mountFile", color="#50B86C"];
+    routes_index -> processes_route [label="mountProcesses", color="#50B86C"];
+    routes_index -> analyze_route [label="mountAnalyze", color="#50B86C"];
+    routes_index -> embedding_route [label="mountEmbedding", color="#50B86C"];
+
+    analyze_route -> streaming [label="mountSSEProgress", color="#50B86C"];
+    analyze_route -> validation [label="createRouteLimiter", color="#50B86C"];
+    analyze_route -> git_clone [label="extractRepoName, getCloneDir", color="#50B86C"];
+    analyze_route -> repo_resolver [label="createRepoLockManager", color="#50B86C"];
+    embedding_route -> streaming [label="mountSSEProgress", color="#50B86C"];
+    embedding_route -> validation [label="createRouteLimiter", color="#50B86C"];
+    embedding_route -> repo_resolver [label="createRepoResolver, createRepoLockManager", color="#50B86C"];
+    file_route -> validation [label="createRouteLimiter, assertString", color="#50B86C"];
+    file_route -> repo_resolver [label="createRepoResolver, requestedRepo", color="#50B86C"];
+    file_route -> error_handler [label="statusFromError", color="#50B86C"];
+    graph_route -> repo_resolver [label="createRepoResolver, requestedRepo", color="#50B86C"];
+    graph_route -> streaming [label="(SSE streaming functions)", color="#50B86C"];
+    processes_route -> repo_resolver [label="requestedRepo", color="#50B86C"];
+    processes_route -> error_handler [label="statusFromError", color="#50B86C"];
+    query_route -> repo_resolver [label="createRepoResolver, requestedRepo", color="#50B86C"];
+    repos_route -> repo_resolver [label="createRepoResolver, createRepoLockManager", color="#50B86C"];
+    repos_route -> validation [label="createRouteLimiter", color="#50B86C"];
+    repos_route -> git_clone [label="getCloneDir", color="#50B86C"];
+    search_route -> repo_resolver [label="createRepoResolver, requestedRepo", color="#50B86C"];
+
+    cors -> config_srv [label="ServerConfig", color="#50B86C"];
+    error_handler -> validation [label="BadRequestError", color="#50B86C"];
+    middleware_index -> cors [label="isAllowedOrigin", color="#50B86C"];
+    repo_resolver -> listRegisteredRepos_s [label="listRegisteredRepos", color="#50B86C"];
+  }
+
+  // External dependencies
+  error_handler -> logger_core_s [label="logger", color="#F5A623", style="dashed"];
+  repo_resolver -> logger_core_s [label="logger", color="#F5A623", style="dashed"];
+  analyze_route -> logger_core_s [label="logger", color="#F5A623", style="dashed"];
+  analyze_route -> portability_s [label="getPortability", color="#F5A623", style="dashed"];
+  analyze_route -> get_storage_path_s [label="getStoragePath", color="#9B59B6", style="dashed"];
+  embedding_route -> lbug_adapter_s [label="withLbugDb, executeQuery", color="#F5A623", style="dashed"];
+  file_route -> lbug_adapter_s [label="withLbugDb, executeQuery", color="#F5A623", style="dashed"];
+  graph_route -> lbug_adapter_s [label="withLbugDb, executeQuery", color="#F5A623", style="dashed"];
+  health_route -> get_version_s [label="getVersion", color="#F5A623", style="dashed"];
+  query_route -> lbug_adapter_s [label="withLbugDb, executeQuery", color="#F5A623", style="dashed"];
+  query_route -> pool_adapter_s [label="isWriteQuery", color="#F5A623", style="dashed"];
+  repos_route -> lbug_adapter_s [label="closeLbug", color="#F5A623", style="dashed"];
+  repos_route -> repo_manager_s [label="listRegisteredRepos, loadMeta", color="#9B59B6", style="dashed"];
+  search_route -> lbug_adapter_s [label="withLbugDb, executeQuery", color="#F5A623", style="dashed"];
+  search_route -> hybrid_search_s [label="hybridSearch", color="#F5A623", style="dashed"];
+  search_route -> bm25_index_s [label="searchFTSFromLbug", color="#F5A623", style="dashed"];
+  repo_resolver -> local_backend_s [label="LocalBackend", color="#50B86C", style="dashed"];
+
+  logger_core_s [label="core/logger.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  portability_s [label="core/portability/index.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  get_version_s [label="core/environment.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  lbug_adapter_s [label="core/lbug/lbug-adapter.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  pool_adapter_s [label="core/lbug/pool-adapter.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  hybrid_search_s [label="core/search/hybrid-search.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  bm25_index_s [label="core/search/bm25-index.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  get_storage_path_s [label="storage/repo-manager.ts", color="#9B59B6", fontcolor="#FFFFFF"];
+  repo_manager_s [label="storage/repo-manager.ts", color="#9B59B6", fontcolor="#FFFFFF"];
+  listRegisteredRepos_s [label="storage/repo-manager.ts", color="#9B59B6", fontcolor="#FFFFFF"];
+  local_backend_s [label="mcp/local/local-backend.ts", color="#50B86C", fontcolor="#FFFFFF"];
+}

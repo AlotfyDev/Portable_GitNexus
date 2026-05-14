@@ -1,0 +1,88 @@
+%% Cross-Layer Summary — 9 Architectural Layers
+%% Edge labels show primary import direction + key symbols
+%% Three critical paths highlighted: Index Write (red), Query Read (blue), Server API (green)
+
+flowchart LR
+  %% ─── Layer Definitions ─────────────────────────────────────────────
+  CLI["1. CLI Layer\nsrc/cli/\n22 commands"]
+  SRV["2. Server Layer\nsrc/server/\nHTTP/WS API"]
+  MCP["3. MCP Layer\nsrc/mcp/\nProtocol Server"]
+  CORE["4. Core Layer\nsrc/core/\nPipeline Engine"]
+  CFG["5. Config Layer\nsrc/config/\nPortable Config\nIgnore Service"]
+  STO["6. Storage Layer\nsrc/storage/\nRepo Manager"]
+  TYP["7. Types Layer\nsrc/types/\nPipelineResult"]
+  LIB["8. Library\nsrc/lib/\nutils.ts"]
+  GEN["9. Generated\nsrc/generated/\nconstants.ts"]
+
+  %% ─── Critical Path Highlighting ────────────────────────────────────
+  %% Path A: Index Write (RED)
+  linkStyle 0,1 stroke:#E74C3C,stroke-width:3px,color:#E74C3C
+
+  %% Path B: Query Read (BLUE)
+  linkStyle 2,3 stroke:#3498DB,stroke-width:3px,color:#3498DB
+
+  %% Path C: Server API (GREEN)
+  linkStyle 4,5,6 stroke:#27AE60,stroke-width:3px,color:#27AE60
+
+  %% ─── Edges: CLI ────────────────────────────────────────────────────
+  CLI -->|"✦ runFullAnalysis, logger\ngetPortability, KnowledgeGraph\ncloseLbug, getVersion\nresolveLLMConfig, getRuntimeCaps\n✦ INDEX WRITE PATH"| CORE
+  CLI -->|"✦ findRepo, streamQuery\n✦ QUERY READ PATH"| CORE
+  CLI -->|"findRepo, getStoragePaths\nhasIndex, listRegisteredRepos\ngetGlobalDir, getCurrentCommit\ngetGitRoot, getRemoteUrl"| STO
+  CLI -->|"PipelineResult"| TYP
+  CLI -->|"DEV_APP_ROOT_URL"| GEN
+  CLI -->|"createServer()"| SRV
+  CLI -->|"installGlobalStdoutSentinel\nLocalBackend"| MCP
+
+  %% ─── Edges: Server ────────────────────────────────────────────────
+  SRV -->|"✦ closeLbug, runFullAnalysis\nlogger, getPortability\n✦ SERVER API PATH"| CORE
+  SRV -->|"loadPortableConfig()"| CFG
+  SRV -->|"createMCPServer()\nLocalBackend"| MCP
+
+  %% ─── Edges: MCP ────────────────────────────────────────────────────
+  MCP -->|"checkStaleness\ngetVersion"| CORE
+
+  %% ─── Edges: Core ──────────────────────────────────────────────────
+  CORE -->|"✦ saveMeta, registerRepo\nreadRegistry, listRegisteredRepos\ngetRemoteUrl, hasGitDir\nensureGitNexusIgnored\n✦ INDEX WRITE PATH"| STO
+  CORE -->|"createIgnoreFilter\nloadPortableConfig"| CFG
+  CORE -->|"IS_PORTABLE_BUILD\nDEV_APP_ROOT_URL"| GEN
+  CORE -->|"generateId()"| LIB
+  CORE -->|"realStdoutWrite\nrealStderrWrite"| MCP
+  CORE -->|"PipelineResult"| TYP
+  CORE -->|"generateAIContextFiles"| CLI
+
+  %% ─── Edges: Config ───────────────────────────────────────────────
+  CFG -->|"getPortability()\nlogger"| CORE
+
+  %% ─── Edges: Types ─────────────────────────────────────────────────
+  TYP -->|"KnowledgeGraph\nCommunityDetectionResult\nProcessDetectionResult"| CORE
+
+  %% ─── Styling ──────────────────────────────────────────────────────
+  classDef cli fill:#E74C3C,color:#fff,stroke:#C0392B
+  classDef srv fill:#E67E22,color:#fff,stroke:#CA6F1E
+  classDef mcp fill:#D4AC0D,color:#fff,stroke:#B7950B
+  classDef core fill:#3498DB,color:#fff,stroke:#2E86C1
+  classDef cfg fill:#95A5A6,color:#fff,stroke:#7F8C8D
+  classDef sto fill:#9B59B6,color:#fff,stroke:#7D3C98
+  classDef typ fill:#1ABC9C,color:#fff,stroke:#148F77
+  classDef lib fill:#BDC3C7,stroke:#95A5A6
+  classDef gen fill:#D5D8DC,stroke:#95A5A6
+
+  class CLI cli
+  class SRV srv
+  class MCP mcp
+  class CORE core
+  class CFG cfg
+  class STO sto
+  class TYP typ
+  class LIB lib
+  class GEN gen
+
+  %% ─── Legend ────────────────────────────────────────────────────────
+  subgraph Legend["★ Critical Paths"]
+    direction TB
+    L1["🔴 Index Write: CLI → Core(runFullAnalysis) → Storage(saveMeta/registerRepo) + Config(ignore/portable)"]
+    L2["🔵 Query Read: CLI → Core(streamQuery/findRepo via lbug-adapter) → Storage(findRepo/getStoragePaths)"]
+    L3["🟢 Server API: Server → Core(runFullAnalysis/closeLbug) + Config(loadPortableConfig) + MCP(createMCPServer)"]
+  end
+
+  style Legend fill:#FDFEFE,stroke:#ABB2B9,stroke-dasharray:5 5

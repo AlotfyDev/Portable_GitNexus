@@ -1,0 +1,140 @@
+%% GitNexus MCP Layer — Architecture & Internal Dependencies
+%% Colors: green=MCP/Server, orange=Core, purple=Storage
+
+graph LR
+  subgraph MCP["MCP Layer (src/mcp/)"]
+    style MCP fill:#1E2E2E,stroke:#50B86C,color:#CDD6F4
+
+    server("server.ts"):::entry
+    tools("tools.ts"):::barrel
+    resources("resources.ts"):::util
+    staleness("staleness.ts"):::util
+    stdio_context("stdio-context.ts"):::util
+    stdio_capture("stdio-capture.ts"):::util
+    compatible_stdio("compatible-stdio-transport.ts"):::util
+    embedder_mcp("core/embedder.ts"):::util
+    lbug_adapter_mcp("core/lbug-adapter.ts"):::util
+
+    subgraph LOCAL["local/"]
+      style LOCAL fill:#1E2E2E,stroke:#3A6B4C,color:#CDD6F4
+      local_backend("local-backend.ts"):::entry
+
+      subgraph HELPERS["helpers/"]
+        style HELPERS fill:#1E2E2E,stroke:#2A5B3C,color:#CDD6F4
+        api_tools("api-tools.ts"):::helper
+        constants_h("constants.ts"):::barrel
+        context_tools("context-tools.ts"):::helper
+        detect_changes("detect-changes.ts"):::helper
+        graph_queries("graph-queries.ts"):::helper
+        group_h("group.ts"):::helper
+        impact("impact.ts"):::helper
+        logging("logging.ts"):::helper
+        rename("rename.ts"):::helper
+        search("search.ts"):::helper
+        state_manager("state-manager.ts"):::helper
+        symbol_resolution("symbol-resolution.ts"):::helper
+        tool_dispatch("tool-dispatch.ts"):::helper
+        types_h("types.ts"):::barrel
+      end
+    end
+
+    server -->|CompatibleStdioServerTransport| compatible_stdio
+    server -->|GITNEXUS_TOOLS| tools
+    server -->|installGlobalStdoutSentinel| stdio_context
+    server -->|getResourceDefinitions, getResourceTemplates| resources
+    server -->|LocalBackend| local_backend
+    resources -->|checkStaleness| staleness
+    resources -->|LocalBackend| local_backend
+    compatible_stdio -->|withMcpWrite| stdio_context
+    stdio_context -->|realStdoutWrite, setActiveStdoutWrite| stdio_capture
+
+    local_backend -->|dispatchTool| tool_dispatch
+    local_backend -->|StateManager| state_manager
+    local_backend -->|executeCypher, formatCypherAsMarkdown| context_tools
+    local_backend -->|executeImpactByUid| impact
+    local_backend -->|queryClusters, queryProcesses| graph_queries
+    local_backend -->|readGroupContractsResource| group_h
+    local_backend -->|isTestFilePath, VALID_NODE_LABELS| constants_h
+    local_backend -->|RepoHandle| types_h
+
+    tool_dispatch -->|dispatchGroupTool, callToolAtGroupRepo| group_h
+    tool_dispatch -->|executeQueryTool| search
+    tool_dispatch -->|executeContext, executeCypher| context_tools
+    tool_dispatch -->|executeImpact| impact
+    tool_dispatch -->|executeDetectChanges| detect_changes
+    tool_dispatch -->|executeRename| rename
+    tool_dispatch -->|executeRouteMap, executeShapeCheck| api_tools
+    tool_dispatch -->|queryClusters, queryProcesses| graph_queries
+    tool_dispatch -->|StateManager| state_manager
+    tool_dispatch -->|RepoHandle| types_h
+    context_tools -->|logQueryError| logging
+    context_tools -->|aggregateClusters, resolveSymbolCandidates| symbol_resolution
+    context_tools -->|StateManager| state_manager
+    context_tools -->|RepoHandle| types_h
+    detect_changes -->|logQueryError| logging
+    detect_changes -->|RepoHandle| types_h
+    graph_queries -->|aggregateClusters| symbol_resolution
+    graph_queries -->|RepoHandle| types_h
+    group_h -->|executeQueryTool| search
+    group_h -->|executeContext| context_tools
+    group_h -->|executeImpact, executeImpactByUid| impact
+    group_h -->|StateManager| state_manager
+    group_h -->|RepoHandle| types_h
+    impact -->|logQueryError| logging
+    impact -->|isTestFilePath, VALID_RELATION_TYPES| constants_h
+    impact -->|resolveSymbolCandidates| symbol_resolution
+    impact -->|StateManager| state_manager
+    impact -->|RepoHandle| types_h
+    rename -->|logQueryError| logging
+    rename -->|executeContext| context_tools
+    rename -->|RepoHandle| types_h
+    search -->|logQueryError, logQueryTiming| logging
+    search -->|VALID_NODE_LABELS| constants_h
+    search -->|StateManager| state_manager
+    search -->|RepoHandle| types_h
+    state_manager -->|CodebaseContext, RepoHandle| types_h
+    symbol_resolution -->|RepoHandle| types_h
+    api_tools -->|logQueryError| logging
+    api_tools -->|RepoHandle| types_h
+
+    types_h -->|RegistryEntry| listRegisteredRepos_type("storage/repo-manager.ts"):::storage
+  end
+
+  server -.->|getVersion| get_version_mcp("core/environment.ts"):::core
+  staleness -.->|checkStaleness, StalenessInfo| check_staleness_mcp("core/git-staleness.ts"):::core
+  embedder_mcp -.->|resolveEmbeddingConfig| resolve_embedding_config_mcp("core/embeddings/config.ts"):::core
+  embedder_mcp -.->|getHttpDimensions, httpEmbed| http_client_mcp("core/embeddings/http-client.ts"):::core
+  embedder_mcp -.->|applyHfEnvOverrides| hf_env_mcp("core/embeddings/hf-env.ts"):::core
+  embedder_mcp -.->|silenceStdout, restoreStdout| pool_adapter_mcp("core/lbug/pool-adapter.ts"):::core
+  embedder_mcp -.->|logger| logger_mcp("core/logger.ts"):::core
+  lbug_adapter_mcp -.->|re-exports| pool_adapter_mcp
+  api_tools -.->|executeQuery, executeParameterized| pool_adapter_mcp
+  context_tools -.->|executeParameterized| pool_adapter_mcp
+  context_tools -.->|isWalCorruptionError| lbug_config_mcp("core/lbug/lbug-config.ts"):::core
+  detect_changes -.->|executeParameterized| pool_adapter_mcp
+  detect_changes -.->|parseDiffHunks| parse_diff_hunks_git("storage/git.ts"):::storage
+  graph_queries -.->|executeQuery, executeParameterized| pool_adapter_mcp
+  group_h -.->|resolveAtGroupMemberRepoPath| resolve_at_member_mcp("core/group/resolve-at-member.ts"):::core
+  impact -.->|executeParameterized| pool_adapter_mcp
+  impact -.->|isWalCorruptionError| lbug_config_mcp
+  logging -.->|logger| logger_mcp
+  search -.->|executeParameterized| pool_adapter_mcp
+  search -.->|collectBestChunks| embedding_types_mcp("core/embeddings/types.ts"):::core
+  search -.->|exact-search symbols| exact_search_mcp("core/embeddings/exact-search.ts"):::core
+  search -.->|EMBEDDING_TABLE_NAME| lbug_schema_mcp("core/lbug/schema.ts"):::core
+  search -.->|platform capabilities| runtime_capabilities_mcp("core/platform/capabilities.ts"):::core
+  search -.->|PhaseTimer| phase_timer_mcp("core/search/phase-timer.ts"):::core
+  search -.->|logger| logger_mcp
+  state_manager -.->|executeParameterized| pool_adapter_mcp
+  state_manager -.->|listRegisteredRepos, cleanupOldKuzuFiles| repo_manager_mcp("storage/repo-manager.ts"):::storage
+  state_manager -.->|checkStalenessAsync| git_staleness_mcp("core/git-staleness.ts"):::core
+  state_manager -.->|logger| logger_mcp
+  state_manager -.->|GroupService, GroupToolPort| group_service_mcp("core/group/service.ts"):::core
+  symbol_resolution -.->|executeParameterized| pool_adapter_mcp
+
+  classDef entry fill:#50B86C,stroke:#50B86C,color:#FFFFFF
+  classDef util fill:#5CC47A,stroke:#50B86C,color:#FFFFFF
+  classDef barrel fill:#5CC47A,stroke:#50B86C,color:#FFFFFF,stroke-dasharray:5 5
+  classDef helper fill:#6BD48A,stroke:#50B86C,color:#FFFFFF
+  classDef core fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+  classDef storage fill:#9B59B6,stroke:#9B59B6,color:#FFFFFF

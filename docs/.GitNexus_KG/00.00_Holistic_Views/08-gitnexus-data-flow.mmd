@@ -1,0 +1,124 @@
+%% GitNexus Data Flow Diagrams
+%% Flow 1: Indexing (write path) — User Input → CLI → Pipeline → Storage
+%% Flow 2: Query (read path) — Query → MCP/HTTP → LadybugDB → Result
+%% Flow 3: Server/Wiki — Serve/Wiki CLI → API/Generator
+
+graph TB
+  classDef input fill:#AED6F1,stroke:#2980B9,color:#1A5276
+  classDef cli fill:#85C1E9,stroke:#2980B9,color:#1A5276
+  classDef pipeline fill:#A9DFBF,stroke:#27AE60,color:#1E8449
+  classDef graph fill:#F5CBA7,stroke:#E67E22,color:#CA6F1E
+  classDef storage fill:#D2B4DE,stroke:#8E44AD,color:#6C3483
+  classDef query fill:#F1948A,stroke:#C0392B,color:#641E16
+  classDef result fill:#F5CBA7,stroke:#E67E22,color:#CA6F1E
+  classDef server fill:#F5CBA7,stroke:#E67E22,color:#CA6F1E
+
+  subgraph Flow1["Flow 1: Indexing (write path)"]
+    direction TB
+    F1_User["User: npx gitnexus analyze [path]"]:::input
+    F1_CLI["cli/index.ts → cli/analyze.ts"]:::cli
+    F1_Run["core/run-analyze.ts (orchestrator)"]:::cli
+
+    F1_Scan["Phase: scan"]:::pipeline
+    F1_Struct["Phase: structure"]:::pipeline
+    F1_MD["Phase: markdown"]:::pipeline
+    F1_Cobol["Phase: cobol"]:::pipeline
+    F1_Parse["Phase: parse (workers + language providers + extractors + model)"]:::pipeline
+    F1_Routes["Phase: routes"]:::pipeline
+    F1_Tools["Phase: tools"]:::pipeline
+    F1_ORM["Phase: orm"]:::pipeline
+    F1_CrossFile["Phase: crossFile (import resolution + graph-bridge)"]:::pipeline
+    F1_ScopeRes["Phase: scopeResolution (type-env + scope)"]:::pipeline
+    F1_MRO["Phase: mro"]:::pipeline
+    F1_Communities["Phase: communities"]:::pipeline
+    F1_Processes["Phase: processes"]:::pipeline
+
+    F1_Graph["KnowledgeGraph (in-memory)"]:::graph
+    F1_LBug["LadybugDB: loadGraphToLbug()"]:::storage
+    F1_FTS["FTS indexes"]:::storage
+    F1_Embed["Embedding pipeline"]:::pipeline
+    F1_Finalize["Finalize: meta.json, registry, AGENTS.md"]:::graph
+    F1_DB[".gitnexus/{name}/lbug.lb"]:::storage
+    F1_Meta[".gitnexus/{name}/meta.json + registry.json"]:::storage
+
+    F1_User --> F1_CLI
+    F1_CLI --> F1_Run
+    F1_Run --> F1_Scan
+    F1_Scan --> F1_Struct
+    F1_Struct --> F1_MD
+    F1_Struct --> F1_Cobol
+    F1_Struct --> F1_Parse
+    F1_Parse --> F1_Routes
+    F1_Parse --> F1_Tools
+    F1_Parse --> F1_ORM
+    F1_Routes --> F1_CrossFile
+    F1_Tools --> F1_CrossFile
+    F1_ORM --> F1_CrossFile
+    F1_CrossFile --> F1_ScopeRes
+    F1_ScopeRes --> F1_MRO
+    F1_MRO --> F1_Communities
+    F1_Communities --> F1_Processes
+    F1_Parse --> F1_Graph
+    F1_Run --> F1_LBug
+    F1_Graph --> F1_LBug
+    F1_LBug --> F1_FTS
+    F1_FTS --> F1_Embed
+    F1_Embed --> F1_Finalize
+    F1_LBug --> F1_DB
+    F1_FTS --> F1_DB
+    F1_Embed --> F1_DB
+    F1_Finalize --> F1_Meta
+  end
+
+  subgraph Flow2["Flow 2: Query (read path)"]
+    direction TB
+    F2_Input["Query: query / context / impact / cypher / detect-changes"]:::query
+    F2_MCP["mcp/server.ts (MCP stdio)"]:::query
+    F2_HTTP["server/routes/ (HTTP API)"]:::query
+    F2_Local["mcp/local/local-backend.ts (LocalBackend.callTool)"]:::query
+    F2_Helpers["mcp/local/helpers/ — impact, context-tools, search, rename, detect-changes, group"]:::query
+    F2_LBugQ["core/lbug/lbug-adapter.ts — executeQuery()"]:::storage
+    F2_FTS["core/search/bm25-index.ts — searchFTSFromLbug()"]:::storage
+    F2_Hybrid["core/search/hybrid-search.ts — hybridSearch()"]:::storage
+    F2_Result["Query Result — ranked flows, blast radius, symbol context"]:::result
+
+    F2_Input --> F2_MCP
+    F2_Input --> F2_HTTP
+    F2_MCP --> F2_Local
+    F2_Local --> F2_Helpers
+    F2_HTTP --> F2_LBugQ
+    F2_HTTP --> F2_FTS
+    F2_HTTP --> F2_Hybrid
+    F2_Helpers --> F2_LBugQ
+    F2_Helpers --> F2_FTS
+    F2_Helpers --> F2_Hybrid
+    F2_LBugQ --> F1_DB
+    F2_FTS --> F1_DB
+    F2_Hybrid --> F1_DB
+    F2_Helpers --> F2_Result
+    F2_MCP --> F2_Result
+    F2_HTTP --> F2_Result
+  end
+
+  subgraph Flow3["Flow 3: Server / Wiki"]
+    direction TB
+    F3_User["User / Browser"]:::input
+    F3_Serve["cli/serve.ts"]:::cli
+    F3_API["server/api.ts — Express + routes"]:::server
+    F3_WebUI["server/web-ui.ts — static files"]:::server
+    F3_MCP_HTTP["server/mcp-http.ts — MCP over HTTP"]:::server
+    F3_WikiCLI["cli/wiki.ts"]:::cli
+    F3_WikiGen["core/wiki/generator.ts + LLM client"]:::graph
+    F3_WikiHTML["Wiki HTML output / Gist"]:::result
+
+    F3_User --> F3_Serve
+    F3_User --> F3_API
+    F3_User --> F3_WikiCLI
+    F3_Serve --> F3_API
+    F3_API --> F3_WebUI
+    F3_API --> F3_MCP_HTTP
+    F3_MCP_HTTP --> F2_Local
+    F3_WikiCLI --> F3_WikiGen
+    F3_WikiGen --> F2_LBugQ
+    F3_WikiGen --> F3_WikiHTML
+  end

@@ -1,0 +1,11 @@
+export { getDatabase, initLbug, withLbugDb, flushWAL, safeClose, closeLbug, isLbugReady } from './lbug-adapter/connection.js';
+export { isReadOnlyDbError } from './lbug-adapter/session-lock.js';
+export { splitRelCsvByLabelPair } from './lbug-adapter/csv-split.js';
+export { loadGraphToLbug } from './lbug-adapter/graph-loader.js';
+export { type WriteStreamFactory, type RelCsvSplitResult, type LbugProgressCallback } from './lbug-adapter/types.js';
+export { insertNodeToLbug, batchInsertNodesToLbug, deleteNodesForFile } from './lbug-adapter/nodes.js';
+export { executeQuery, streamQuery, executePrepared, executeWithReusedStatement } from './lbug-adapter/query.js';
+export { getLbugStats } from './lbug-adapter/stats.js';
+export { loadCachedEmbeddings, fetchExistingEmbeddingHashes, getEmbeddingTableName } from './lbug-adapter/embeddings.js';
+export { loadFTSExtension, createFTSIndex, ensureFTSIndex, queryFTS, dropFTSIndex } from './lbug-adapter/fts.js';
+export { loadVectorExtension } from './lbug-adapter/vector.js';

@@ -1,0 +1,58 @@
+%% Portability Domain — Component Dependency Graph
+%% Color: #FDEBD0 (light orange)
+
+flowchart LR
+  classDef port fill:#FDEBD0,stroke:#E67E22,stroke-width:1px
+  classDef consumer fill:#FDEBD0,stroke:#E67E22,stroke-width:1px,stroke-dasharray:3
+  classDef ext fill:#F0F0F0,stroke:#999,stroke-width:1px
+
+  subgraph Portability["core/portability/"]
+    contract["contract.ts\nPortabilityContract(interface)\nPortableContract\nDevContract"]:::port
+    idx["index.ts\ngetPortability() (singleton)"]:::port
+  end
+
+  consts["generated/constants.js\nIS_PORTABLE_BUILD\nDEV_APP_ROOT_URL"]:::ext
+
+  contract --> consts
+  idx --> consts
+  idx --> contract
+
+  subgraph Core["core/ consumers (7)"]
+    provider["embeddings/provider.ts\ncreateProviders()"]:::consumer
+    embedder["embeddings/embedder.ts\nhasOrtCudaProvider()\nisCudaAvailable()"]:::consumer
+    parser["tree-sitter/parser-loader.ts"]:::consumer
+    caps["platform/capabilities.ts\ngetRuntimeCapabilities()"]:::consumer
+    extLoader["lbug/extension-loader.ts\nloadVectorExtension()"]:::consumer
+    sidecar["sidecar/ladybug-adapter.ts"]:::consumer
+    community["ingestion/community-processor.ts\nprocessCommunities()"]:::consumer
+  end
+
+  subgraph CLI["cli/ consumers (3)"]
+    setup["cli/setup.ts\nsetupCommand()"]:::consumer
+    aiContext["cli/ai-context.ts\ngenerateAIContextFiles()"]:::consumer
+    optGram["cli/optional-grammars.ts\nensureOptionalGrammars()"]:::consumer
+  end
+
+  subgraph Server["server/ consumers (2)"]
+    webui["server/web-ui.ts\nstartWebUI()"]:::consumer
+    analyzeRoute["server/routes/analyze.ts\nanalyzeHandler()"]:::consumer
+  end
+
+  subgraph Config["config/ consumer (1)"]
+    portableCfg["config/portable-config.ts\nloadPortableConfig()"]:::consumer
+  end
+
+  %% All 13 consumers → getPortability()
+  provider --> idx
+  embedder --> idx
+  parser --> idx
+  caps --> idx
+  extLoader --> idx
+  sidecar --> idx
+  community --> idx
+  setup --> idx
+  aiContext --> idx
+  optGram --> idx
+  webui --> idx
+  analyzeRoute --> idx
+  portableCfg --> idx

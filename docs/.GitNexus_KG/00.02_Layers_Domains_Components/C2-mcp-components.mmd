@@ -1,0 +1,295 @@
+flowchart TB
+  %% GitNexus MCP Layer — Components-Level Knowledge Graph
+  %% Color coding:
+  %%   teal(#1ABC9C) = MCP entry/barrel
+  %%   lightteal(#A3E4D7) = MCP helpers
+  %%   darkteal(#0E6655) = MCP protocol
+  %%   orange(#F5A623) = Core dependencies
+  %%   purple(#9B59B6) = Storage dependencies
+  %%   gray(#95A5A6) = External packages
+
+  %% ==============================
+  %% MCP LOCAL LAYER — Barrel
+  %% ==============================
+  subgraph LOCAL["local/ (Backend Layer)"]
+    style LOCAL fill:#F8FBFF,color:#1ABC9C
+
+    %% --- Barrel ---
+    LB["local-backend.ts<br/>(barrel / LocalBackend)"]
+    style LB fill:#1ABC9C,color:white,stroke-dasharray:5 3,stroke-width:2px
+
+    %% --- Helpers cluster ---
+    subgraph HELPERS["helpers/"]
+      style HELPERS fill:#F0FAF8,color:#A3E4D7
+
+      TD["tool-dispatch.ts<br/>(dispatchTool)"]
+      SM["state-manager.ts<br/>(StateManager)"]
+      TY["types.ts<br/>(RepoHandle, CodebaseContext)"]
+      SR["search.ts<br/>(executeQueryTool, bm25Search, semanticSearch)"]
+      CT["context-tools.ts<br/>(executeContext, executeCypher, executeOverview)"]
+      GQ["graph-queries.ts<br/>(queryClusters, queryProcesses, ...)"]
+      GR["group.ts<br/>(dispatchGroupTool, group resources)"]
+      AT["api-tools.ts<br/>(routeMap, shapeCheck, apiImpact)"]
+      IM["impact.ts<br/>(executeImpact, BFS traversal)"]
+      DC["detect-changes.ts<br/>(executeDetectChanges)"]
+      RN["rename.ts<br/>(executeRename)"]
+      SYR["symbol-resolution.ts<br/>(resolveSymbolCandidates, aggregateClusters)"]
+      LG["logging.ts<br/>(logQueryError, logQueryTiming)"]
+      CS["constants.ts<br/>(VALID_NODE_LABELS, isTestFilePath)"]
+
+      style TD fill:#A3E4D7
+      style SM fill:#A3E4D7
+      style TY fill:#A3E4D7
+      style SR fill:#A3E4D7
+      style CT fill:#A3E4D7
+      style GQ fill:#A3E4D7
+      style GR fill:#A3E4D7
+      style AT fill:#A3E4D7
+      style IM fill:#A3E4D7
+      style DC fill:#A3E4D7
+      style RN fill:#A3E4D7
+      style SYR fill:#A3E4D7
+      style LG fill:#A3E4D7
+      style CS fill:#A3E4D7
+    end
+  end
+
+  %% ==============================
+  %% MCP PROTOCOL LAYER
+  %% ==============================
+  subgraph PROTO["mcp/ (Protocol Layer)"]
+    style PROTO fill:#F5FBF8,color:#0E6655
+
+    SV["server.ts<br/>(createMCPServer, startMCPServer)"]
+    TL["tools.ts<br/>(GITNEXUS_TOOLS definitions)"]
+    RS["resources.ts<br/>(getResourceDefinitions, readResource)"]
+    ST["staleness.ts<br/>(re-export checkStaleness)"]
+    SCX["stdio-context.ts<br/>(withMcpWrite, stdout sentinel)"]
+    SCP["stdio-capture.ts<br/>(realStdoutWrite — leaf module)"]
+    TR["compatible-stdio-transport.ts<br/>(CompatibleStdioServerTransport)"]
+    EM["core/embedder.ts<br/>(embedQuery, initEmbedder)"]
+    LA["core/lbug-adapter.ts<br/>(re-export pool-adapter)"]
+
+    style SV fill:#0E6655,color:white
+    style TL fill:#0E6655,color:white
+    style RS fill:#0E6655,color:white
+    style ST fill:#0E6655,color:white
+    style SCX fill:#0E6655,color:white
+    style SCP fill:#0E6655,color:white
+    style TR fill:#0E6655,color:white
+    style EM fill:#0E6655,color:white
+    style LA fill:#0E6655,color:white
+  end
+
+  %% ==============================
+  %% EXTERNAL DEPENDENCIES
+  %% ==============================
+
+  subgraph CORE["core/ Dependencies"]
+    style CORE fill:#FEF5E7,color:#F5A623
+
+    C_PA["lbug/pool-adapter<br/>(executeQuery, initLbug, ...)"]
+    C_LC["lbug/lbug-config<br/>(isWalCorruptionError)"]
+    C_LS["lbug/schema<br/>(EMBEDDING_TABLE_NAME)"]
+    C_LG["logger"]
+    C_ENV["environment<br/>(getVersion)"]
+    C_GS["git-staleness<br/>(checkStaleness, StalenessInfo)"]
+    C_GSV["group/service<br/>(GroupService)"]
+    C_GR["group/resolve-at-member<br/>(resolveAtGroupMember)"]
+    C_ET["embeddings/types<br/>(collectBestChunks)"]
+    C_EE["embeddings/exact-search<br/>(rankExactEmbeddingRows)"]
+    C_EC["embeddings/config<br/>(resolveEmbeddingConfig)"]
+    C_EH["embeddings/hf-env<br/>(HF env overrides)"]
+    C_EHC["embeddings/http-client<br/>(httpEmbedQuery)"]
+    C_SPT["search/phase-timer<br/>(PhaseTimer)"]
+    C_SBM["search/bm25-index<br/>(searchFTSFromLbug)"]
+    C_PC["platform/capabilities<br/>(vector extension check)"]
+
+    style C_PA fill:#F5A623
+    style C_LC fill:#F5A623
+    style C_LS fill:#F5A623
+    style C_LG fill:#F5A623
+    style C_ENV fill:#F5A623
+    style C_GS fill:#F5A623
+    style C_GSV fill:#F5A623
+    style C_GR fill:#F5A623
+    style C_ET fill:#F5A623
+    style C_EE fill:#F5A623
+    style C_EC fill:#F5A623
+    style C_EH fill:#F5A623
+    style C_EHC fill:#F5A623
+    style C_SPT fill:#F5A623
+    style C_SBM fill:#F5A623
+    style C_PC fill:#F5A623
+  end
+
+  subgraph STORAGE["storage/ Dependencies"]
+    style STORAGE fill:#F4ECF7,color:#9B59B6
+
+    S_RM["repo-manager<br/>(listRegisteredRepos, RegistryEntry)"]
+    S_GT["git<br/>(parseDiffHunks, FileDiff)"]
+
+    style S_RM fill:#9B59B6,color:white
+    style S_GT fill:#9B59B6,color:white
+  end
+
+  MCP_SDK["@modelcontextprotocol/sdk<br/>(Server, Transport, Schemas)"]
+  style MCP_SDK fill:#95A5A6,color:white
+
+  HF["@huggingface/transformers<br/>(pipeline, env)"]
+  style HF fill:#95A5A6,color:white
+
+  %% ==============================
+  %% EDGES: Barrel → Helpers
+  %% ==============================
+
+  LB -->|"StateManager"| SM
+  LB -->|"dispatchTool"| TD
+  LB -->|"executeCypher, formatCypherAsMarkdown"| CT
+  LB -->|"executeImpactByUid, executeImpact"| IM
+  LB -->|"queryClusters, queryProcesses, ..."| GQ
+  LB -->|"readGroupContractsResource, readGroupStatusResource"| GR
+  LB -.->|"RepoHandle (type)"| TY
+  LB -->|"(re-export) isTestFilePath, VALID_*"| CS
+  LB -..->|"executeQueryTool (dyn import)"| SR
+
+  LB -.->|"isWriteQuery (re-export)"| C_PA
+
+  %% ==============================
+  %% EDGES: tool-dispatch → ALL helpers
+  %% ==============================
+
+  TD -->|"dispatchGroupTool, callToolAtGroupRepo"| GR
+  TD -->|"executeQueryTool"| SR
+  TD -->|"executeContext, executeCypher, executeOverview"| CT
+  TD -->|"executeImpact"| IM
+  TD -->|"executeDetectChanges"| DC
+  TD -->|"executeRename"| RN
+  TD -->|"executeRouteMap, executeShapeCheck, ..."| AT
+  TD -->|"queryClusters, queryProcesses, ..."| GQ
+  TD -.->|"StateManager (type)"| SM
+  TD -.->|"RepoHandle (type)"| TY
+
+  %% ==============================
+  %% EDGES: state-manager → external
+  %% ==============================
+
+  SM -->|"initLbug, closeLbug, isLbugReady"| C_PA
+  SM -->|"listRegisteredRepos, cleanupOldKuzuFiles"| S_RM
+  SM -->|"checkStalenessAsync, checkCwdMatch"| C_GS
+  SM -->|"logger"| C_LG
+  SM -->|"GroupService, GroupToolPort"| C_GSV
+  SM -.->|"CodebaseContext, RepoHandle (type)"| TY
+
+  %% ==============================
+  %% EDGES: context-tools
+  %% ==============================
+
+  CT -->|"executeQuery, executeParameterized, ..."| C_PA
+  CT -->|"isWalCorruptionError"| C_LC
+  CT -->|"logQueryError"| LG
+  CT -->|"aggregateClusters, resolveSymbolCandidates"| SYR
+
+  %% ==============================
+  %% EDGES: impact
+  %% ==============================
+
+  IM -->|"executeQuery, executeParameterized"| C_PA
+  IM -->|"isWalCorruptionError"| C_LC
+  IM -->|"logQueryError"| LG
+  IM -->|"isTestFilePath, VALID_RELATION_TYPES"| CS
+  IM -->|"resolveSymbolCandidates"| SYR
+
+  %% ==============================
+  %% EDGES: search (most complex)
+  %% ==============================
+
+  SR -->|"executeQuery, executeParameterized"| C_PA
+  SR -->|"collectBestChunks"| C_ET
+  SR -->|"rankExactEmbeddingRows"| C_EE
+  SR -->|"EMBEDDING_TABLE_NAME, EMBEDDING_INDEX_NAME"| C_LS
+  SR -->|"getExactScanLimit, isVectorExtensionSupported"| C_PC
+  SR -->|"PhaseTimer"| C_SPT
+  SR -->|"logger"| C_LG
+  SR -->|"VALID_NODE_LABELS"| CS
+  SR -->|"logQueryError, logQueryTiming"| LG
+  SR -..->|"searchFTSFromLbug (dyn import)"| C_SBM
+  SR -..->|"embedQuery, getEmbeddingDims (dyn import)"| EM
+
+  %% ==============================
+  %% EDGES: graph-queries
+  %% ==============================
+
+  GQ -->|"executeQuery, executeParameterized"| C_PA
+  GQ -->|"aggregateClusters"| SYR
+
+  %% ==============================
+  %% EDGES: group
+  %% ==============================
+
+  GR -->|"resolveAtGroupMemberRepoPath"| C_GR
+  GR -->|"executeQueryTool"| SR
+  GR -->|"executeContext"| CT
+  GR -->|"executeImpact, executeImpactByUid"| IM
+
+  %% ==============================
+  %% EDGES: api-tools
+  %% ==============================
+
+  AT -->|"executeQuery, executeParameterized"| C_PA
+  AT -->|"logQueryError"| LG
+
+  %% ==============================
+  %% EDGES: detect-changes
+  %% ==============================
+
+  DC -->|"executeParameterized"| C_PA
+  DC -->|"parseDiffHunks, FileDiff"| S_GT
+  DC -->|"logQueryError"| LG
+
+  %% ==============================
+  %% EDGES: rename
+  %% ==============================
+
+  RN -->|"executeContext"| CT
+  RN -->|"logQueryError"| LG
+
+  %% ==============================
+  %% EDGES: symbol-resolution & logging & types
+  %% ==============================
+
+  SYR -->|"executeParameterized"| C_PA
+  LG -->|"logger"| C_LG
+  TY -.->|"RegistryEntry (type)"| S_RM
+
+  %% ==============================
+  %% EDGES: Protocol Layer
+  %% ==============================
+
+  SV -->|"Server"| MCP_SDK
+  SV -->|"getVersion"| C_ENV
+  SV -->|"CompatibleStdioServerTransport"| TR
+  SV -->|"GITNEXUS_TOOLS"| TL
+  SV -->|"installGlobalStdoutSentinel"| SCX
+  SV -.->|"LocalBackend (type)"| LB
+  SV -->|"getResourceDefinitions, readResource"| RS
+
+  RS -.->|"LocalBackend (type)"| LB
+  RS -->|"checkStaleness"| ST
+
+  ST -->|"(re-export) checkStaleness"| C_GS
+
+  SCX -->|"AsyncLocalStorage"| ALS(("node:async_hooks"))
+  SCX -->|"realStdoutWrite, setActiveStdoutWrite"| SCP
+
+  TR -->|"Transport, JSONRPCMessage"| MCP_SDK
+  TR -->|"withMcpWrite"| SCX
+
+  EM -->|"pipeline, env"| HF
+  EM -->|"isHttpMode, httpEmbedQuery"| C_EHC
+  EM -->|"resolveEmbeddingConfig"| C_EC
+  EM -->|"HF env overrides"| C_EH
+  EM -->|"silenceStdout, restoreStdout"| C_PA
+  EM -->|"logger"| C_LG
+
+  LA -->|"(re-export all)"| C_PA

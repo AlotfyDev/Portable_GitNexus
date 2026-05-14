@@ -1,0 +1,10 @@
+export declare const ROUTE_HTTP_METHODS: Set<string>;
+export declare const ROUTE_RESOURCE_METHODS: Set<string>;
+export declare const EXPRESS_ROUTE_METHODS: Set<string>;
+export declare const HTTP_CLIENT_ONLY_METHODS: Set<string>;
+export declare const HTTP_CLIENT_RECEIVERS: Set<string>;
+export declare const ROUTE_DECORATOR_NAMES: Set<string>;
+export declare const RESOURCE_ACTIONS: string[];
+export declare const API_RESOURCE_ACTIONS: string[];
+export declare const PRISMA_QUERY_RE: RegExp;
+export declare const SUPABASE_QUERY_RE: RegExp;

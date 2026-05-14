@@ -1,0 +1,659 @@
+digraph IngestionComponents {
+  rankdir=LR;
+  compound=true;
+  splines=ortho;
+  nodesep=0.5;
+  ranksep=1.2;
+  fontname="Segoe UI";
+  fontsize=11;
+  label="GitNexus Core/Ingestion Domain — Component-Level Knowledge Graph";
+  labelloc=t;
+  labeljust=l;
+  pad=0.5;
+  bgcolor="#FAFAFA";
+  newrank=true;
+
+  // ─── Node defaults ────────────────────────────────────────────────
+  node [shape=box, style="rounded,filled", fontname="Segoe UI", fontsize=9,
+        margin="0.08,0.03", penwidth=1.2];
+
+  edge [fontname="Segoe UI", fontsize=8, color="#666666", penwidth=1.0];
+
+  // ─── Subgraph: ROOT files ─────────────────────────────────────────
+  subgraph cluster_root {
+    label="ingestion/ (root) — 41 top-level files";
+    fontsize=12; fontname="Segoe UI"; fontweight=bold;
+    style=filled; fillcolor="#F0F0F0"; color="#CCCCCC";
+    pencolor="#AAAAAA";
+
+    node [fillcolor="#F5F5F5", color="#999999"];
+    root_pipeline     [label="pipeline.ts\n(150 loc)"];
+    root_lang_prov    [label="language-provider.ts\n(607 loc)\n[abstract class]"];
+    root_lang_cfg     [label="language-config.ts\n(241 loc)"];
+    root_call_proc    [label="call-processor.ts\n(49 loc)\n[barrel → ../call-processor/]"];
+    root_call_types   [label="call-types.ts\n(177 loc)"];
+    root_call_routing [label="call-routing.ts\n(136 loc)"];
+    root_parsing_proc [label="parsing-processor.ts\n(2 loc)\n[barrel]"];
+    root_scope_ext    [label="scope-extractor.ts\n(2 loc)\n[barrel]"];
+    root_type_env     [label="type-env.ts\n(5 loc)\n[barrel]"];
+    root_cobol_proc   [label="cobol-processor.ts\n(9 loc)\n[barrel]"];
+    root_import_proc  [label="import-processor.ts\n(509 loc)"];
+    root_heritage_proc[label="heritage-processor.ts\n(489 loc)"];
+    root_mro_proc     [label="mro-processor.ts\n(768 loc)"];
+    root_framework_det[label="framework-detection.ts\n(563 loc)"];
+    root_community    [label="community-processor.ts\n(454 loc)"];
+    root_process_proc [label="process-processor.ts\n(466 loc)"];
+    root_binding_acc  [label="binding-accumulator.ts\n(391 loc)"];
+    root_finalize     [label="finalize-orchestrator.ts\n(199 loc)"];
+    root_emit_refs    [label="emit-references.ts\n(299 loc)"];
+    root_resolve_refs [label="resolve-references.ts\n(229 loc)"];
+    root_export_det   [label="export-detection.ts\n(248 loc)"];
+    root_entry_pt     [label="entry-point-scoring.ts\n(239 loc)"];
+    root_reg_primary  [label="registry-primary-flag.ts\n(120 loc)"];
+    root_fs_walker    [label="filesystem-walker.ts\n(135 loc)"];
+    root_field_ext    [label="field-extractor.ts\n(57 loc)"];
+    root_structure    [label="structure-processor.ts\n(47 loc)"];
+    root_markdown     [label="markdown-processor.ts\n(161 loc)"];
+    root_vue_sfc      [label="vue-sfc-extractor.ts\n(142 loc)"];
+    root_scope_bridge [label="scope-extractor-bridge.ts\n(60 loc)"];
+    root_ast_cache    [label="ast-cache.ts\n(77 loc)"];
+    root_constants    [label="constants.ts\n(26 loc)"];
+    root_field_types  [label="field-types.ts\n(77 loc)"];
+    root_method_types [label="method-types.ts\n(101 loc)"];
+    root_variable_types[label="variable-types.ts\n(91 loc)"];
+    root_class_types  [label="class-types.ts\n(44 loc)"];
+    root_heritage_types[label="heritage-types.ts\n(104 loc)"];
+    root_shadow       [label="shadow-harness.ts\n(222 loc)"];
+    root_cpp_ue       [label="cpp-ue-preprocessor.ts\n(265 loc)"];
+    root_cluster_ench [label="cluster-enricher.ts\n(238 loc)"];
+    root_import_adpt  [label="import-target-adapter.ts\n(124 loc)"];
+    root_ts_queries   [label="tree-sitter-queries.ts\n(21 loc)\n[barrel → ../tree-sitter-queries/]"];
+  }
+
+  // ─── Subgraph: call-processor/ ─────────────────────────────────────
+  subgraph cluster_call_processor {
+    label="call-processor/ — Call Resolution Engine (26 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#E8F8F5"; color="#A3E4D7";
+    pencolor="#1ABC9C";
+    node [fillcolor="#E8F8F5", color="#1ABC9C"];
+
+    cp_types           [label="types.ts\n(43 loc)"];
+    cp_constants       [label="constants.ts\n(67 loc)"];
+    cp_default_dispatch[label="default-dispatch.ts\n(19 loc)"];
+    cp_process_calls   [label="process-calls.ts\n(677 loc)\n[main orchestrator]"];
+    cp_process_extracted[label="process-calls-from-extracted.ts\n(223 loc)"];
+    cp_resolve_target  [label="helpers/resolve-call-target.ts\n(159 loc)"];
+    cp_resolve_free    [label="helpers/resolve-free-call.ts\n(54 loc)"];
+    cp_resolve_member  [label="helpers/resolve-member-call.ts\n(27 loc)"];
+    cp_resolve_static  [label="helpers/resolve-static-call.ts\n(76 loc)"];
+    cp_receiver_res    [label="helpers/receiver-resolution.ts\n(167 loc)"];
+    cp_enclosing_fn    [label="helpers/enclosing-function.ts\n(220 loc)"];
+    cp_exported_types  [label="helpers/exported-types.ts\n(103 loc)"];
+    cp_callable_cands  [label="helpers/callable-candidates.ts\n(79 loc)"];
+    cp_constructor_vfy [label="helpers/constructor-verifier.ts\n(78 loc)"];
+    cp_assignments     [label="helpers/assignments.ts\n(66 loc)"];
+    cp_mixed_chain     [label="helpers/mixed-chain.ts\n(71 loc)"];
+    cp_module_aliased  [label="helpers/module-aliased-call.ts\n(64 loc)"];
+    cp_overload_disa   [label="helpers/overload-disambiguation.ts\n(55 loc)"];
+    cp_routes          [label="helpers/routes.ts\n(157 loc)"];
+    cp_interface_disp  [label="helpers/interface-dispatch.ts\n(34 loc)"];
+    cp_access_emitter  [label="helpers/access-emitter.ts\n(21 loc)"];
+    cp_provider_primary[label="helpers/provider-primary-resolver.ts\n(35 loc)"];
+    cp_seed_cross_file [label="helpers/seed-cross-file-receivers.ts\n(35 loc)"];
+    cp_member_call_file[label="helpers/member-call-by-file.ts\n(57 loc)"];
+    cp_single_cand     [label="helpers/single-candidate.ts\n(12 loc)"];
+    cp_fetch_calls     [label="helpers/fetch-calls.ts\n(75 loc)"];
+  }
+
+  // ─── Subgraph: cobol/ ─────────────────────────────────────────────
+  subgraph cluster_cobol {
+    label="cobol/ — COBOL Language Ingestion (12 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#FDF2E9"; color="#F5CBA7";
+    pencolor="#E67E22";
+    node [fillcolor="#FDF2E9", color="#E67E22"];
+
+    cob_copy_expand  [label="cobol-copy-expander.ts\n(510 loc)"];
+    cob_preproc_root [label="cobol-preprocessor.ts\n(35 loc)"];
+    cob_jcl_parser   [label="jcl-parser.ts\n(269 loc)"];
+    cob_jcl_proc     [label="jcl-processor.ts\n(274 loc)"];
+    cob_preproc_ext  [label="cobol-preprocessor/extract.ts\n(1046 loc)\n[largest cobol file]"];
+    cob_preproc_pre  [label="cobol-preprocessor/preprocess.ts\n(17 loc)"];
+    cob_preproc_const[label="cobol-preprocessor/constants.ts\n(186 loc)"];
+    cob_preproc_types[label="cobol-preprocessor/types.ts\n(162 loc)"];
+    cob_exec_parsers [label="cobol-preprocessor/helpers/exec-block-parsers.ts\n(177 loc)"];
+    cob_stmt_parsers [label="cobol-preprocessor/helpers/statement-parsers.ts\n(195 loc)"];
+    cob_string_utils [label="cobol-preprocessor/helpers/string-utils.ts\n(14 loc)"];
+  }
+
+  // ─── Subgraph: cobol-processor/ ────────────────────────────────────
+  subgraph cluster_cobol_proc {
+    label="cobol-processor/ — COBOL Pipeline Integration (8 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#FDF2E9"; color="#F5CBA7";
+    pencolor="#D35400";
+    node [fillcolor="#FDEDEC", color="#D35400"];
+
+    cbp_main       [label="process-main.ts\n(180 loc)"];
+    cbp_graph_map  [label="graph-mapper.ts\n(1047 loc)\n[largest cobol-proc file]"];
+    cbp_detectors  [label="detectors.ts\n(19 loc)"];
+    cbp_types      [label="types.ts\n(28 loc)"];
+    cbp_constants  [label="constants.ts\n(7 loc)"];
+    cbp_data_item  [label="helpers/data-item-map.ts\n(24 loc)"];
+    cbp_owning_prog[label="helpers/owning-program.ts\n(35 loc)"];
+    cbp_prop_utils [label="helpers/property-utils.ts\n(11 loc)"];
+  }
+
+  // ─── Subgraph: parsing-processor/ ──────────────────────────────────
+  subgraph cluster_parsing_processor {
+    label="parsing-processor/ — Parse Orchestration (4 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#F5EEF8"; color="#D7BDE2";
+    pencolor="#8E44AD";
+    node [fillcolor="#F5EEF8", color="#8E44AD"];
+
+    pp_types      [label="types.ts\n(31 loc)"];
+    pp_parse      [label="process-parsing.ts\n(62 loc)\n[main entry]"];
+    pp_sequential [label="helpers/sequential.ts\n(478 loc)\n[sequential parse runner]"];
+    pp_worker_disp[label="helpers/worker-dispatch.ts\n(147 loc)\n[worker dispatch]"];
+  }
+
+  // ─── Subgraph: scope-extractor/ ────────────────────────────────────
+  subgraph cluster_scope_extractor {
+    label="scope-extractor/ — Symbol Scope Extraction (9 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#EBF5FB"; color="#AED6F1";
+    pencolor="#2980B9";
+    node [fillcolor="#EBF5FB", color="#2980B9"];
+
+    se_types        [label="types.ts\n(40 loc)"];
+    se_extract      [label="extract.ts\n(66 loc)\n[main entry]"];
+    se_declarations [label="helpers/declarations.ts\n(181 loc)"];
+    se_references   [label="helpers/references.ts\n(126 loc)"];
+    se_scope_builder[label="helpers/scope-builder.ts\n(163 loc)"];
+    se_type_bindings[label="helpers/type-bindings.ts\n(105 loc)"];
+    se_capture_utils[label="helpers/capture-utils.ts\n(48 loc)"];
+    se_partition    [label="helpers/partition.ts\n(48 loc)"];
+    se_imports      [label="helpers/imports.ts\n(18 loc)"];
+  }
+
+  // ─── Subgraph: type-env/ ───────────────────────────────────────────
+  subgraph cluster_type_env {
+    label="type-env/ — Type Environment Builder (11 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#FEF9E7"; color="#F9E79F";
+    pencolor="#F1C40F";
+    node [fillcolor="#FEF9E7", color="#F1C40F"];
+
+    te_build          [label="build.ts\n(380 loc)\n[main entry]"];
+    te_constants      [label="constants.ts\n(44 loc)"];
+    te_types          [label="types.ts\n(42 loc)"];
+    te_seed_imports   [label="seed-imports.ts\n(15 loc)"];
+    te_class_lookup   [label="helpers/class-lookup.ts\n(208 loc)"];
+    te_scope_lookup   [label="helpers/scope-lookup.ts\n(100 loc)"];
+    te_fixpoint       [label="helpers/fixpoint.ts\n(82 loc)"];
+    te_inheritance    [label="helpers/inheritance.ts\n(58 loc)"];
+    te_method_return  [label="helpers/method-return.ts\n(51 loc)"];
+    te_field_resol    [label="helpers/field-resolution.ts\n(28 loc)"];
+    te_substitute_this[label="helpers/substitute-this.ts\n(12 loc)"];
+  }
+
+  // ─── Subgraph: type-extractors/ ────────────────────────────────────
+  subgraph cluster_type_extractors {
+    label="type-extractors/ — Per-Language Type Extraction (27 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#EAFAF1"; color="#A9DFBF";
+    pencolor="#27AE60";
+    node [fillcolor="#EAFAF1", color="#27AE60"];
+
+    // Per-language extractors
+    te_ts    [label="typescript.ts\n(710 loc)"];
+    te_ccpp  [label="c-cpp.ts\n(561 loc)"];
+    te_cs    [label="csharp.ts\n(594 loc)"];
+    te_py    [label="python.ts\n(503 loc)"];
+    te_go    [label="go.ts\n(522 loc)"];
+    te_java  [label="jvm.ts (java+kotlin)\n(2 loc barrel)"];
+    te_rs    [label="rust.ts\n(533 loc)"];
+    te_sw    [label="swift.ts\n(523 loc)"];
+    te_php   [label="php.ts\n(555 loc)"];
+    te_rb    [label="ruby.ts\n(424 loc)"];
+    te_dart  [label="dart.ts\n(415 loc)"];
+    te_types [label="types.ts\n(184 loc)\n[shared types]"];
+    te_shared [label="shared.ts\n(16 loc)\n[barrel → shared/]"];
+
+    // JVM sub-extractors
+    te_jvmsh [label="jvm/shared.ts\n(46 loc)"];
+    te_javac [label="jvm/java/config.ts\n(252 loc)"];
+    te_javah [label="jvm/java/helpers.ts\n(50 loc)"];
+    te_kotc  [label="jvm/kotlin/config.ts\n(420 loc)"];
+    te_koth  [label="jvm/kotlin/helpers.ts\n(69 loc)"];
+
+    // Shared utilities
+    te_sh_const    [label="shared/constants.ts\n(167 loc)"];
+    te_sh_generics [label="shared/generics.ts\n(134 loc)"];
+    te_sh_simple   [label="shared/simple-type.ts\n(124 loc)"];
+    te_sh_ret      [label="shared/return-type.ts\n(72 loc)"];
+    te_sh_container[label="shared/container.ts\n(56 loc)"];
+    te_sh_types    [label="shared/types.ts\n(47 loc)"];
+    te_sh_misc     [label="shared/misc.ts\n(47 loc)"];
+    te_sh_var      [label="shared/var-name.ts\n(27 loc)"];
+    te_sh_nullable [label="shared/nullable.ts\n(21 loc)"];
+  }
+
+  // ─── Subgraph: tree-sitter-queries/ ────────────────────────────────
+  subgraph cluster_ts_queries {
+    label="tree-sitter-queries/ — Per-Language TS Queries (13 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#F5F5F5"; color="#CCCCCC";
+    pencolor="#95A5A6";
+    node [fillcolor="#F5F5F5", color="#95A5A6"];
+
+    tsq_index    [label="index.ts\n(32 loc)\n[barrel]"];
+    tsq_ts       [label="typescript.ts\n(442 loc)"];
+    tsq_cfamily  [label="c-family.ts\n(155 loc)\n[C/CPP]"];
+    tsq_dart     [label="dart.ts\n(210 loc)"];
+    tsq_php      [label="php.ts\n(113 loc)"];
+    tsq_kotlin   [label="kotlin.ts\n(94 loc)"];
+    tsq_python   [label="python.ts\n(80 loc)"];
+    tsq_csharp   [label="csharp.ts\n(74 loc)"];
+    tsq_swift    [label="swift.ts\n(70 loc)"];
+    tsq_ruby     [label="ruby.ts\n(62 loc)"];
+    tsq_go       [label="go.ts\n(60 loc)"];
+    tsq_rust     [label="rust.ts\n(55 loc)"];
+    tsq_java     [label="java.ts\n(49 loc)"];
+  }
+
+  // ─── Subgraph: languages/ ──────────────────────────────────────────
+  subgraph cluster_languages {
+    label="languages/ — Language Provider Implementations (~79 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#FADBD8"; color="#F5B7B1";
+    pencolor="#E74C3C";
+    node [fillcolor="#FDEDEC", color="#E74C3C"];
+
+    lang_index    [label="index.ts\n(78 loc)\n[barrel — providers map]"];
+    lang_ts       [label="typescript.ts\n(362 loc)"];
+    lang_sw       [label="swift.ts\n(335 loc)"];
+    lang_php      [label="php.ts\n(292 loc)"];
+    lang_rb       [label="ruby.ts\n(261 loc)"];
+    lang_cs       [label="csharp.ts\n(216 loc)"];
+    lang_rs       [label="rust.ts\n(176 loc)"];
+    lang_kt       [label="kotlin.ts\n(169 loc)"];
+    lang_py       [label="python.ts\n(155 loc)"];
+    lang_dart     [label="dart.ts\n(146 loc)"];
+    lang_go       [label="go.ts\n(106 loc)"];
+    lang_vue      [label="vue.ts\n(84 loc)"];
+    lang_java     [label="java.ts\n(68 loc)"];
+    lang_cobol    [label="cobol.ts\n(29 loc)"];
+    lang_ccpp     [label="c-cpp.ts\n(431 loc)"];
+
+    // Sub-modules (representative)
+    lang_ts_capt  [label="typescript/captures.ts\n(526 loc)"];
+    lang_ts_impd  [label="typescript/import-decomposer.ts\n(438 loc)"];
+    lang_ts_interp[label="typescript/interpret.ts\n(312 loc)"];
+    lang_ts_bind  [label="typescript/merge-bindings.ts\n(168 loc)"];
+    lang_ts_hooks [label="typescript/simple-hooks.ts\n(162 loc)"];
+    lang_ts_rbind [label="typescript/receiver-binding.ts\n(186 loc)"];
+    lang_ts_scope [label="typescript/scope-resolver.ts\n(148 loc)"];
+    lang_ts_queries[label="typescript/query/queries.ts\n(797 loc)\n[largest query file]"];
+  }
+
+  // ─── Subgraph: pipeline-phases/ ────────────────────────────────────
+  subgraph cluster_pipeline_phases {
+    label="pipeline-phases/ — Ingestion Pipeline Phases (19 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#D5F5E3"; color="#A9DFBF";
+    pencolor="#2ECC71";
+    node [fillcolor="#D5F5E3", color="#2ECC71"];
+
+    pp_index       [label="index.ts\n(31 loc)\n[barrel]"];
+    pp_types       [label="types.ts\n(101 loc)\n[phase types]"];
+    pp_runner      [label="runner.ts\n(229 loc)\n[pipeline executor]"];
+    pp_scan        [label="scan.ts\n(60 loc)\n[phase 1]"];
+    pp_structure   [label="structure.ts\n(62 loc)\n[phase 2]"];
+    pp_markdown    [label="markdown.ts\n(59 loc)\n[phase 3]"];
+    pp_cobol       [label="cobol.ts\n(74 loc)\n[phase 4]"];
+    pp_parse       [label="parse.ts\n(117 loc)\n[phase 5]"];
+    pp_parse_impl  [label="parse-impl.ts\n(627 loc)\n[parse implementation]"];
+    pp_routes      [label="routes.ts\n(302 loc)\n[phase 6]"];
+    pp_tools       [label="tools.ts\n(114 loc)\n[phase 7]"];
+    pp_orm         [label="orm.ts\n(101 loc)\n[phase 8]"];
+    pp_orm_extract [label="orm-extraction.ts\n(106 loc)"];
+    pp_cross_file  [label="cross-file.ts\n(92 loc)\n[phase 9]"];
+    pp_cross_impl  [label="cross-file-impl.ts\n(215 loc)"];
+    pp_mro         [label="mro.ts\n(58 loc)\n[phase 11]"];
+    pp_communities [label="communities.ts\n(83 loc)\n[phase 12]"];
+    pp_processes   [label="processes.ts\n(177 loc)\n[phase 13]"];
+    pp_wildcard    [label="wildcard-synthesis.ts\n(345 loc)"];
+  }
+
+  // ─── Subgraph: model/ ──────────────────────────────────────────────
+  subgraph cluster_model {
+    label="model/ — Semantic Model & Registries (11 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#E8E8E8"; color="#CCCCCC";
+    pencolor="#7F8C8D";
+    node [fillcolor="#EEEEEE", color="#7F8C8D"];
+
+    mdl_index         [label="index.ts\n(99 loc)\n[barrel]"];
+    mdl_semantic      [label="semantic-model.ts\n(273 loc)\n[top-level container]"];
+    mdl_symbol_table  [label="symbol-table.ts\n(363 loc)"];
+    mdl_type_reg      [label="type-registry.ts\n(113 loc)"];
+    mdl_method_reg    [label="method-registry.ts\n(222 loc)"];
+    mdl_field_reg     [label="field-registry.ts\n(53 loc)"];
+    mdl_heritage      [label="heritage-map.ts\n(379 loc)"];
+    mdl_reg_table     [label="registration-table.ts\n(333 loc)"];
+    mdl_resolve       [label="resolve.ts\n(447 loc)"];
+    mdl_resolv_ctx    [label="resolution-context.ts\n(455 loc)"];
+    mdl_scope_idx     [label="scope-resolution-indexes.ts\n(86 loc)"];
+  }
+
+  // ─── Subgraph: utils/ ──────────────────────────────────────────────
+  subgraph cluster_utils {
+    label="utils/ — Shared Utilities (9 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#E8E8E8"; color="#CCCCCC";
+    pencolor="#95A5A6";
+    node [fillcolor="#EEEEEE", color="#95A5A6"];
+
+    util_ast_help   [label="ast-helpers.ts\n(600 loc)"];
+    util_call_anal  [label="call-analysis.ts\n(660 loc)"];
+    util_method_prop[label="method-props.ts\n(170 loc)"];
+    util_graph_sort [label="graph-sort.ts\n(109 loc)"];
+    util_ruby_self  [label="ruby-self-call.ts\n(101 loc)"];
+    util_max_file   [label="max-file-size.ts\n(65 loc)"];
+    util_env         [label="env.ts\n(25 loc)"];
+    util_verbose    [label="verbose.ts\n(6 loc)"];
+    util_event_loop [label="event-loop.ts\n(6 loc)"];
+  }
+
+  // ─── Subgraph: workers/ ───────────────────────────────────────────
+  subgraph cluster_workers {
+    label="workers/ — Parse Worker Pool (10 files)";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#D5F5E3"; color="#A9DFBF";
+    pencolor="#1ABC9C";
+    node [fillcolor="#D5F5E3", color="#1ABC9C"];
+
+    wk_main         [label="parse-worker.ts\n(95 loc)\n[main entry]"];
+    wk_pool         [label="worker-pool.ts\n(484 loc)\n[pool management]"];
+    wk_file_group   [label="parse-worker/process-file-group.ts\n(924 loc)\n[largest worker file]"];
+    wk_batch        [label="parse-worker/process-batch.ts\n(114 loc)"];
+    wk_types        [label="parse-worker/types.ts\n(159 loc)"];
+    wk_constants    [label="parse-worker/constants.ts\n(74 loc)"];
+    wk_cache        [label="parse-worker/helpers/cache.ts\n(301 loc)"];
+    wk_route_extr   [label="parse-worker/helpers/route-extractor.ts\n(387 loc)"];
+    wk_orm          [label="parse-worker/helpers/orm.ts\n(42 loc)"];
+    wk_merge        [label="parse-worker/helpers/merge.ts\n(27 loc)"];
+  }
+
+  // ─── Subgraph: extractors (method, field, variable, class) ─────────
+  subgraph cluster_method_extractors {
+    label="method-extractors/ — Per-Language Method Extraction (12 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#E8DAEF"; color="#D2B4DE";
+    pencolor="#8E44AD";
+    node [fillcolor="#E8DAEF", color="#8E44AD"];
+
+    me_generic [label="generic.ts\n(259 loc)"];
+  }
+  subgraph cluster_field_extractors {
+    label="field-extractors/ — Per-Language Field Extraction (14 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#D5F5E3"; color="#A9DFBF";
+    pencolor="#27AE60";
+    node [fillcolor="#D5F5E3", color="#27AE60"];
+
+    fe_generic [label="generic.ts\n(192 loc)"];
+    fe_ts_spec [label="typescript.ts\n(335 loc)\n[TS-specific]"];
+  }
+  subgraph cluster_variable_extractors {
+    label="variable-extractors/ — Per-Language Variable Extraction (12 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#FEF9E7"; color="#F9E79F";
+    pencolor="#F1C40F";
+    node [fillcolor="#FEF9E7", color="#F1C40F"];
+
+    ve_generic [label="generic.ts\n(108 loc)"];
+  }
+  subgraph cluster_class_extractors {
+    label="class-extractors/ — Per-Language Class Extraction (12 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#EBF5FB"; color="#AED6F1";
+    pencolor="#2980B9";
+    node [fillcolor="#EBF5FB", color="#2980B9"];
+
+    ce_generic [label="generic.ts\n(177 loc)"];
+  }
+
+  // ─── Subgraph: call-extractors/ ────────────────────────────────────
+  subgraph cluster_call_extractors {
+    label="call-extractors/ — Per-Language Call Extraction (12 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#F5EEF8"; color="#D7BDE2";
+    pencolor="#8E44AD";
+    node [fillcolor="#F5EEF8", color="#8E44AD"];
+
+    cale_generic [label="generic.ts\n(86 loc)"];
+  }
+
+  // ─── Subgraph: import-resolvers/ ───────────────────────────────────
+  subgraph cluster_import_resolvers {
+    label="import-resolvers/ — Import Resolution (22 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#EBF5FB"; color="#AED6F1";
+    pencolor="#2980B9";
+    node [fillcolor="#EBF5FB", color="#2980B9"];
+
+    ir_resolver_factory [label="resolver-factory.ts\n(35 loc)\n[factory]"];
+    ir_standard         [label="standard.ts\n(184 loc)\n[standard resolver]"];
+    ir_types            [label="types.ts\n(81 loc)"];
+    ir_utils            [label="utils.ts\n(185 loc)"];
+    ir_csharp           [label="csharp.ts\n(127 loc)"];
+    ir_jvm              [label="jvm.ts\n(127 loc)"];
+    ir_python           [label="python.ts\n(80 loc)"];
+    ir_php              [label="php.ts\n(94 loc)"];
+    ir_rust             [label="rust.ts\n(84 loc)"];
+    ir_go               [label="go.ts\n(57 loc)"];
+    ir_ruby             [label="ruby.ts\n(25 loc)"];
+  }
+
+  // ─── Subgraph: heritage-extractors/ ────────────────────────────────
+  subgraph cluster_heritage_extractors {
+    label="heritage-extractors/ (3 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#FADBD8"; color="#F5B7B1";
+    pencolor="#E74C3C";
+    node [fillcolor="#FDEDEC", color="#E74C3C"];
+
+    he_generic [label="generic.ts\n(84 loc)"];
+  }
+
+  // ─── Subgraph: route-extractors/ ───────────────────────────────────
+  subgraph cluster_route_extractors {
+    label="route-extractors/ — Framework Route Detection (5 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#F5EEF8"; color="#D7BDE2";
+    pencolor="#8E44AD";
+    node [fillcolor="#F5EEF8", color="#8E44AD"];
+
+    re_middleware   [label="middleware.ts\n(198 loc)"];
+    re_response    [label="response-shapes.ts\n(303 loc)"];
+    re_nextjs      [label="nextjs.ts\n(80 loc)"];
+    re_expo        [label="expo.ts\n(41 loc)"];
+    re_php         [label="php.ts\n(26 loc)"];
+  }
+
+  // ─── Subgraph: named-bindings/ ─────────────────────────────────────
+  subgraph cluster_named_bindings {
+    label="named-bindings/ — Named Import Bindings (8 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#EAFAF1"; color="#A9DFBF";
+    pencolor="#27AE60";
+    node [fillcolor="#EAFAF1", color="#27AE60"];
+
+    nb_types   [label="types.ts\n(19 loc)"];
+    nb_php     [label="php.ts\n(61 loc)"];
+    nb_ts      [label="typescript.ts\n(60 loc)"];
+    nb_py      [label="python.ts\n(55 loc)"];
+    nb_cs      [label="csharp.ts\n(40 loc)"];
+    nb_kt      [label="kotlin.ts\n(37 loc)"];
+    nb_java    [label="java.ts\n(30 loc)"];
+    nb_rs      [label="rust.ts\n(73 loc)"];
+  }
+
+  // ─── Subgraph: scope-resolution/ ───────────────────────────────────
+  subgraph cluster_scope_resolution {
+    label="scope-resolution/ — Ring-3 Scope Resolution (~21 files)";
+    fontsize=10; fontweight=bold;
+    style=filled; fillcolor="#EBF5FB"; color="#AED6F1";
+    pencolor="#2471A3";
+    node [fillcolor="#EBF5FB", color="#2471A3"];
+
+    sr_contract   [label="contract/scope-resolver.ts\n(567 loc)\n[contract interface]"];
+    sr_workspace  [label="workspace-index.ts\n(80 loc)"];
+    sr_pipeline   [label="pipeline/run.ts\n(302 loc)\n[pipeline orchestrator]"];
+    sr_phase      [label="pipeline/phase.ts\n(190 loc)"];
+    sr_registry   [label="pipeline/registry.ts\n(31 loc)"];
+    sr_ownership  [label="pipeline/reconcile-ownership.ts\n(147 loc)"];
+    sr_validate   [label="pipeline/validate-bindings-immutability.ts\n(78 loc)"];
+    sr_comp_recv  [label="passes/compound-receiver.ts\n(546 loc)"];
+    sr_recv_calls [label="passes/receiver-bound-calls.ts\n(501 loc)"];
+    sr_import_ret [label="passes/imported-return-types.ts\n(214 loc)"];
+    sr_free_call  [label="passes/free-call-fallback.ts\n(208 loc)"];
+    sr_mro        [label="passes/mro.ts\n(110 loc)"];
+    sr_overload   [label="passes/overload-narrowing.ts\n(68 loc)"];
+    sr_edges      [label="graph-bridge/edges.ts\n(100 loc)"];
+    sr_ids        [label="graph-bridge/ids.ts\n(155 loc)"];
+    sr_node_lkup  [label="graph-bridge/node-lookup.ts\n(126 loc)"];
+    sr_refs_edges [label="graph-bridge/references-to-edges.ts\n(99 loc)"];
+    sr_imports_edg[label="graph-bridge/imports-to-edges.ts\n(57 loc)"];
+    sr_method_disp[label="graph-bridge/method-dispatch.ts\n(36 loc)"];
+    sr_walkers    [label="scope/walkers.ts\n(469 loc)"];
+    sr_ns_targets [label="scope/namespace-targets.ts\n(62 loc)"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PIPELINE FLOW — main processing chain
+  // ═══════════════════════════════════════════════════════════════════
+
+  // Pipeline phase ordering (horizontal flow)
+  // call-processor → parse-worker → cobol-processor → parsing-processor
+  // → scope-extractor → type-extractors → type-env → model
+
+  // Root pipeline orchestrates everything
+  root_pipeline -> pp_scan    [label="initPipeline", weight=100, penwidth=2.5, color="#2ECC71"];
+
+  // Pipeline phase chain (actual pipeline order from pipeline-phases/index.ts)
+  pp_scan      -> pp_structure    [label="→ phase 2", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_structure -> pp_markdown     [label="→ phase 3", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_markdown  -> pp_cobol        [label="→ phase 4", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_cobol     -> pp_parse        [label="→ phase 5", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_parse     -> pp_parse_impl   [label="delegates to", weight=80, color="#2ECC71"];
+  pp_parse     -> pp_routes       [label="→ phase 6", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_routes    -> pp_tools        [label="→ phase 7", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_tools     -> pp_orm          [label="→ phase 8", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_orm       -> pp_cross_file   [label="→ phase 9", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_cross_file-> sr_pipeline     [label="→ phase 10 (scope-res)", weight=100, penwidth=2.0, color="#2ECC71"];
+  sr_pipeline  -> pp_mro          [label="→ phase 11", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_mro       -> pp_communities  [label="→ phase 12", weight=100, penwidth=2.0, color="#2ECC71"];
+  pp_communities-> pp_processes   [label="→ phase 13", weight=100, penwidth=2.0, color="#2ECC71"];
+
+  // Internal processing chain (the user-specified ordering)
+  root_call_proc -> cp_process_calls [label="delegates to", style=dashed, color="#666666"];
+
+  // call-processor uses call-types
+  cp_process_calls -> root_call_types [label="processCalls", dir=back, style=dashed, color="#999999"];
+
+  // parse phase invokes workers
+  pp_parse_impl -> wk_main        [label="spawnParseWorkers", penwidth=2.0, color="#1ABC9C"];
+
+  // Call processor feeds into scope extraction
+  cp_process_extracted -> se_extract [label="scope-extract (indirect)", style=dashed, color="#999999"];
+
+  // Scope extraction feeds into type environment
+  se_extract -> te_build [label="buildTypeEnvironment", style=dashed, color="#999999"];
+
+  // Type environment uses model
+  te_build -> mdl_semantic [label="creates/uses", style=dashed, color="#999999"];
+
+  // type-extractors used by parsing + languages
+  root_parsing_proc -> pp_parse [label="barrel re-export", style=dashed, color="#AAAAAA"];
+
+  // Workers use scope-extractor
+  wk_file_group -> se_extract [label="extractScopes", penwidth=1.5, color="#2980B9"];
+
+  // Import resolvers used by import-processor
+  root_import_proc -> ir_resolver_factory [label="resolveImports", penwidth=1.5, color="#2980B9"];
+
+  // Pipeline scope-res phase uses scope-resolution
+  pp_cross_file -> sr_pipeline [label="triggers", style=dashed, color="#999999"];
+
+  // Languages barrel → language-provider interface
+  lang_index -> root_lang_prov [label="implements", dir=back, style=dashed, color="#999999"];
+
+  // Tree-sitter queries → parsing
+  tsq_index -> pp_parse [label="querySource", style=dashed, color="#999999"];
+
+  // type-extractors language-specific files → languages
+  te_ts -> lang_ts [label="typeExtractor", style=dashed, color="#AAAAAA"];
+  te_ccpp -> lang_ccpp [label="typeExtractor", style=dashed, color="#AAAAAA"];
+  te_py -> lang_py [label="typeExtractor", style=dashed, color="#AAAAAA"];
+
+  // Model used by type-env
+  mdl_type_reg -> te_build [label="type registration", style=dashed, color="#999999", dir=back];
+  mdl_method_reg -> te_build [label="method lookup", style=dashed, color="#999999", dir=back];
+
+  // Heritage processor → model heritage-map
+  root_heritage_proc -> mdl_heritage [label="buildHeritageMap", penwidth=1.5, color="#7F8C8D"];
+
+  // MRO processor → model resolve
+  root_mro_proc -> mdl_resolve [label="method resolution", penwidth=1.5, color="#7F8C8D"];
+
+  // Route extractors → pipeline routes phase
+  pp_routes -> re_middleware [label="extractRoutes", style=dashed, color="#999999"];
+
+  // Pipeline cobol phase → cobol-processor
+  pp_cobol -> cbp_main [label="processCOBOL", penwidth=1.5, color="#D35400"];
+
+  // Parse-worker helpers → specific processing
+  wk_route_extr -> pp_routes [label="route detection", style=dashed, color="#999999"];
+
+  // Named-bindings used by import-resolvers
+  nb_types -> ir_types [label="share types", style=dashed, color="#999999"];
+
+  // ─── Legend ─────────────────────────────────────────────────────────
+  subgraph cluster_legend {
+    label="Legend";
+    fontsize=11; fontweight=bold;
+    style=filled; fillcolor="#FFFFFF"; color="#DDDDDD";
+    pencolor="#AAAAAA";
+    node [shape=none, fillcolor=transparent, color=transparent,
+          fontname="Segoe UI", fontsize=9, margin="0,0"];
+
+    legend_label1 [label=<
+      <table border="0" cellborder="0" cellspacing="3">
+        <tr><td><font point-size="10"><b>Pipeline Phase Flow</b></font></td></tr>
+        <tr><td><font color="#2ECC71">━━▶</font> sequential phase edge</td></tr>
+        <tr><td><font color="#2980B9">━━▶</font> data dependency</td></tr>
+        <tr><td><font color="#999999">- - ▶</font> indirect / re-export</td></tr>
+        <tr><td><font color="#666666">- - ▶</font> barrel re-export</td></tr>
+        <tr><td><hr/></td></tr>
+        <tr><td><font point-size="10"><b>Colors by Sub-Directory</b></font></td></tr>
+        <tr><td><table border="0" cellspacing="2">
+          <tr><td bgcolor="#E8F8F5" width="12" height="12"/></td><td>call-processor (mint)</td></tr>
+          <tr><td bgcolor="#FDF2E9" width="12" height="12"/></td><td>cobol* (warm)</td></tr>
+          <tr><td bgcolor="#F5EEF8" width="12" height="12"/></td><td>parsing-processor, call-extr (lavender)</td></tr>
+          <tr><td bgcolor="#EBF5FB" width="12" height="12"/></td><td>scope-extractor, class-extr (sky)</td></tr>
+          <tr><td bgcolor="#FEF9E7" width="12" height="12"/></td><td>type-env (yellow)</td></tr>
+          <tr><td bgcolor="#EAFAF1" width="12" height="12"/></td><td>type-extractors, field-extr (green)</td></tr>
+          <tr><td bgcolor="#F5F5F5" width="12" height="12"/></td><td>tree-sitter-queries (gray)</td></tr>
+          <tr><td bgcolor="#FADBD8" width="12" height="12"/></td><td>languages (rose)</td></tr>
+          <tr><td bgcolor="#D5F5E3" width="12" height="12"/></td><td>pipeline-phases, workers (leaf)</td></tr>
+          <tr><td bgcolor="#E8E8E8" width="12" height="12"/></td><td>utils, model (light gray)</td></tr>
+        </table></td></tr>
+      </table>
+    >];
+  }
+}

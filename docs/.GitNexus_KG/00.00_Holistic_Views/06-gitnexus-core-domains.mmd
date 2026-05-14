@@ -1,0 +1,172 @@
+%% GitNexus Core Domains — Detailed Architecture
+%% Pink=Ingestion, Green=Embeddings, Orange=Portability, Purple=LadybugDB, Coral=Group
+
+graph TB
+  classDef pipeline fill:#AED6F1,stroke:#2980B9,color:#1A5276
+  classDef phase fill:#85C1E9,stroke:#2980B9,color:#1A5276
+  classDef embed fill:#A9DFBF,stroke:#27AE60,color:#1E8449
+  classDef port fill:#F5CBA7,stroke:#E67E22,color:#CA6F1E
+  classDef lbug fill:#D2B4DE,stroke:#8E44AD,color:#6C3483
+  classDef search fill:#A9DFBF,stroke:#27AE60,color:#1E8449
+  classDef group fill:#F1948A,stroke:#C0392B,color:#641E16
+  classDef vec fill:#F5CBA7,stroke:#E67E22,color:#CA6F1E
+  classDef lang fill:#D4E6F1,stroke:#2980B9,color:#1A5276
+  classDef ext fill:#D4E6F1,stroke:#2980B9,color:#1A5276
+  classDef model fill:#D4E6F1,stroke:#2980B9,color:#1A5276
+
+  subgraph Ingestion["Ingestion Pipeline (core/ingestion/)"]
+    direction TB
+    PH_Scan["scan — file discovery"]:::phase
+    PH_Structure["structure — file-node scaffolding"]:::phase
+    PH_Markdown["markdown — doc extraction"]:::phase
+    PH_Cobol["cobol — COBOL/JCL + preprocessor"]:::phase
+    PH_Parse["parse — workers + language providers"]:::pipeline
+    PH_Routes["routes — nextjs, expo, php detection"]:::phase
+    PH_Tools["tools — call-processor, extractors"]:::phase
+    PH_ORM["orm — framework pattern detection"]:::phase
+    PH_CrossFile["crossFile — import resolution, graph-bridge"]:::pipeline
+    PH_ScopeRes["scopeResolution — type-env, scope-extractor"]:::pipeline
+    PH_MRO["mro — method resolution order"]:::phase
+    PH_Communities["communities — community detection, cluster enrichment"]:::phase
+    PH_Processes["processes — execution flow extraction"]:::phase
+
+    subgraph Languages["Language Providers"]
+      LANG_TS["typescript/"]:::lang
+      LANG_PY["python/"]:::lang
+      LANG_CS["csharp/"]:::lang
+      LANG_GO["go/"]:::lang
+      LANG_Other["java / kotlin / ruby / rust / php / dart / swift / vue / c-cpp"]:::lang
+    end
+
+    subgraph Extractors["Extractors (per-language configs/)"]
+      EXT_Call["call-extractors/"]:::ext
+      EXT_Class["class-extractors/"]:::ext
+      EXT_Field["field-extractors/"]:::ext
+      EXT_Method["method-extractors/"]:::ext
+      EXT_Type["type-extractors/"]:::ext
+      EXT_Var["variable-extractors/"]:::ext
+      EXT_Import["import-resolvers/"]:::ext
+    end
+
+    subgraph SemanticModel["Semantic Model"]
+      MOD_SymTable["symbol-table.ts"]:::model
+      MOD_Heritage["heritage-map.ts"]:::model
+      MOD_Registry["method/field/type registries"]:::model
+      MOD_ResCtx["resolution-context.ts"]:::model
+      MOD_SemModel["semantic-model.ts"]:::model
+    end
+  end
+
+  subgraph Embeddings["Embeddings Pipeline (core/embeddings/)"]
+    EMB_Provider["provider.ts — EmbeddingProvider interface"]:::embed
+    EMB_Http["http-client.ts — HTTP provider (portable)"]:::embed
+    EMB_HF["hf-env.ts — HuggingFace model cache"]:::embed
+    EMB_Chunker["chunker.ts / character-chunk.ts — chunking"]:::embed
+    EMB_Embedder["embedder.ts — model dispatch"]:::embed
+    EMB_Pipeline["embedding-pipeline.ts — orchestrator"]:::embed
+    EMB_Cache["cache-loader.ts — pre-rebuild cache"]:::embed
+    EMB_Struct["structural-extractor.ts — AST chunking"]:::embed
+    EMB_Exact["exact-search.ts — fallback exact match"]:::embed
+  end
+
+  subgraph Portability["Portability (core/portability/)"]
+    PORT_Contract["PortabilityContract interface"]:::port
+    PORT_Portable["PortableContract (bun build)"]:::port
+    PORT_Dev["DevContract (npm package)"]:::port
+    PORT_Index["getPortability() — singleton dispatch"]:::port
+  end
+
+  subgraph LadybugDB["LadybugDB (core/lbug/)"]
+    LBUG_Adapter["lbug-adapter.ts — init/query/load/close"]:::lbug
+    LBUG_Pool["pool-adapter.ts — connection pool"]:::lbug
+    LBUG_Schema["schema.ts — table/query constants"]:::lbug
+    LBUG_Repo["repository/ — embedding CRUD"]:::lbug
+    LBUG_CSV["csv-generator.ts — graph export"]:::lbug
+  end
+
+  subgraph Search["Search (core/search/)"]
+    SRCH_BM25["bm25-index.ts"]:::search
+    SRCH_FTS["fts-indexes.ts"]:::search
+    SRCH_Hybrid["hybrid-search.ts"]:::search
+  end
+
+  subgraph Group["Group / Multi-Repo (core/group/)"]
+    GRP_Service["service.ts — GroupService"]:::group
+    GRP_Bridge["bridge-db.ts — Contract Bridge"]:::group
+    GRP_Contract["contract-extractor.ts"]:::group
+    GRP_Impact["cross-impact.ts"]:::group
+    GRP_Match["matching.ts"]:::group
+    GRP_Sync["sync.ts"]:::group
+    GRP_Ext["extractors/ — workspace, route, topic"]:::group
+  end
+
+  subgraph VectorStore["Vector Store (core/vector-store/)"]
+    VS_Provider["provider.ts — IVecDBProvider"]:::vec
+    VS_ICM["icm-provider.ts"]:::vec
+    VS_Ladybug["ladybug-provider.ts"]:::vec
+    VS_Registry["registry.ts — factory dispatch"]:::vec
+  end
+
+  %% ── Pipeline phase edges ──
+  PH_Scan --> PH_Structure
+  PH_Structure --> PH_Markdown
+  PH_Structure --> PH_Cobol
+  PH_Structure --> PH_Parse
+  PH_Parse --> PH_Routes
+  PH_Parse --> PH_Tools
+  PH_Parse --> PH_ORM
+  PH_Routes --> PH_CrossFile
+  PH_Tools --> PH_CrossFile
+  PH_ORM --> PH_CrossFile
+  PH_CrossFile --> PH_ScopeRes
+  PH_ScopeRes --> PH_MRO
+  PH_MRO --> PH_Communities
+  PH_Communities --> PH_Processes
+
+  %% Ingestion internal
+  PH_Parse --> LANG_TS
+  PH_Parse --> LANG_PY
+  PH_Parse --> LANG_CS
+  PH_Parse --> LANG_GO
+  PH_Parse --> LANG_Other
+  PH_Parse --> EXT_Call
+  PH_Parse --> EXT_Class
+  PH_Parse --> EXT_Field
+  PH_Parse --> EXT_Method
+  PH_Parse --> EXT_Type
+  PH_Parse --> EXT_Var
+  PH_Parse --> EXT_Import
+  PH_Parse --> MOD_SymTable
+  PH_Parse --> MOD_SemModel
+  PH_CrossFile --> MOD_ResCtx
+  PH_ScopeRes --> MOD_Heritage
+
+  %% Cross-domain edges
+  PORT_Index --> PORT_Contract
+  PORT_Index --> PORT_Portable
+  PORT_Index --> PORT_Dev
+  PORT_Portable --> EMB_Http
+
+  EMB_Pipeline --> EMB_Provider
+  EMB_Pipeline --> EMB_Chunker
+  EMB_Pipeline --> EMB_Embedder
+  EMB_Pipeline --> EMB_Cache
+  EMB_Provider --> EMB_Http
+  EMB_Provider --> EMB_HF
+
+  LBUG_Adapter --> LBUG_Pool
+  LBUG_Adapter --> LBUG_Schema
+  LBUG_Adapter --> LBUG_Repo
+  LBUG_Adapter --> LBUG_CSV
+
+  SRCH_BM25 --> LBUG_Adapter
+  SRCH_FTS --> LBUG_Adapter
+
+  GRP_Service --> GRP_Bridge
+  GRP_Service --> GRP_Contract
+  GRP_Service --> GRP_Match
+  GRP_Service --> GRP_Impact
+
+  VS_Registry --> VS_ICM
+  VS_Registry --> VS_Ladybug
+  VS_Ladybug --> LBUG_Repo

@@ -1,0 +1,518 @@
+digraph Ingestion_Domain {
+  rankdir=TB;
+  label="GitNexus Ingestion Domain — core/ingestion/ (THE BIG ONE)";
+  fontsize=16;
+  fontname="Consolas";
+  compound=true;
+  bgcolor="#1E1E2E";
+  fontcolor="#CDD6F4";
+  edge [fontname="Consolas", fontsize=8, color="#585B70"];
+  node [fontname="Consolas", fontsize=9, style="filled", shape="box"];
+
+  subgraph cluster_ingestion {
+    label="Ingestion Domain (core/ingestion/)    —    142 files mapped";
+    fontsize=14;
+    fontcolor="#F5A623";
+    style="filled";
+    color="#F5A623";
+    fillcolor="#2E2E1E";
+
+    // Pipeline orchestrator
+    pipeline [label="pipeline.ts", fillcolor="#F5A623", fontcolor="#FFFFFF", shape="diamond"];
+
+    // === SUBGRAPH: Pipeline Phases ===
+    subgraph cluster_phases {
+      label="pipeline-phases/ (19 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      phases_index [label="index.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      types_ph [label="types.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      scan [label="scan.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      structure [label="structure.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      markdown [label="markdown.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      cobol_ph [label="cobol.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      parse [label="parse.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      parse_impl [label="parse-impl.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      routes_ph [label="routes.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      tools_ph [label="tools.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      orm [label="orm.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      orm_extraction [label="orm-extraction.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      cross_file [label="cross-file.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      cross_file_impl [label="cross-file-impl.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      mro_ph [label="mro.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      communities [label="communities.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      processes_ph [label="processes.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      runner [label="runner.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      wildcard_synthesis [label="wildcard-synthesis.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    }
+
+    // Phase edges
+    pipeline -> phases_index [label="(imports all phases)", color="#F5A623"];
+    phases_index -> scan [label="scanPhase", color="#D4A017"];
+    phases_index -> structure [label="structurePhase", color="#D4A017"];
+    phases_index -> markdown [label="markdownPhase", color="#D4A017"];
+    phases_index -> cobol_ph [label="cobolPhase", color="#D4A017"];
+    phases_index -> parse [label="parsePhase", color="#D4A017"];
+    phases_index -> routes_ph [label="routesPhase", color="#D4A017"];
+    phases_index -> tools_ph [label="toolsPhase", color="#D4A017"];
+    phases_index -> orm [label="ormPhase", color="#D4A017"];
+    phases_index -> cross_file [label="crossFilePhase", color="#D4A017"];
+    phases_index -> mro_ph [label="mroPhase", color="#D4A017"];
+    phases_index -> communities [label="communitiesPhase", color="#D4A017"];
+    phases_index -> processes_ph [label="processesPhase", color="#D4A017"];
+    phases_index -> runner [label="runPipeline", color="#D4A017"];
+
+    scan -> types_ph [label="PipelinePhase, PipelineContext", color="#D4A017"];
+    scan -> fs_walker [label="walkRepositoryPaths", color="#D4A017"];
+
+    structure -> types_ph [label="PipelinePhase", color="#D4A017"];
+    structure -> structure_proc [label="processStructure", color="#D4A017"];
+
+    markdown -> markdown_proc [label="processMarkdown", color="#D4A017"];
+    markdown -> types_ph [label="PipelinePhase", color="#D4A017"];
+
+    cobol_ph -> cobol_proc_barrel [label="processCobol, isCobolFile", color="#D4A017"];
+    cobol_ph -> fs_walker [label="readFileContents", color="#D4A017"];
+
+    parse_impl -> binding_acc [label="BindingAccumulator", color="#D4A017"];
+    parse_impl -> parsing_proc [label="processParsing", color="#D4A017"];
+    parse_impl -> import_proc [label="(import processor)", color="#D4A017"];
+    parse_impl -> call_proc [label="(call processor)", color="#D4A017"];
+    parse_impl -> heritage_proc [label="(heritage processor)", color="#D4A017"];
+    parse_impl -> ast_cache [label="ASTCache, createASTCache", color="#D4A017"];
+    parse_impl -> fs_walker [label="readFileContents", color="#D4A017"];
+    parse_impl -> worker_pool [label="createWorkerPool", color="#D4A017"];
+
+    cross_file_impl -> call_proc [label="(call processor symbols)", color="#D4A017"];
+    cross_file_impl -> ast_cache [label="createASTCache", color="#D4A017"];
+    cross_file_impl -> fs_walker [label="readFileContents", color="#D4A017"];
+
+    routes_ph -> nextjs_routes [label="nextjsFileToRouteURL", color="#D4A017"];
+    routes_ph -> expo_routes [label="expoFileToRouteURL", color="#D4A017"];
+    routes_ph -> php_routes [label="phpFileToRouteURL", color="#D4A017"];
+    routes_ph -> resp_shapes [label="(response-shapes)", color="#D4A017"];
+    routes_ph -> mid_routes [label="(middleware)", color="#D4A017"];
+    routes_ph -> call_proc [label="processNextjsFetchRoutes", color="#D4A017"];
+
+    orm -> orm_extraction [label="ExtractedORMQuery", color="#D4A017"];
+
+    // === SUBGRAPH: Call Processor ===
+    subgraph cluster_callproc {
+      label="call-processor/ (27 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      call_proc_barrel [label="call-processor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", shape="diamond"];
+      call_proc_types [label="types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+      call_proc_constants [label="constants.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+      default_dispatch [label="default-dispatch.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      process_calls [label="process-calls.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      process_calls_extracted [label="process-calls-from-extracted.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+
+      subgraph cluster_call_helpers {
+        label="helpers/ (21 files)";
+        fontsize=10;
+        fontcolor="#C8960E";
+        style="filled";
+        color="#3A3A1E";
+        fillcolor="#2E2E1E";
+
+        access_emitter [label="access-emitter.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        assignments [label="assignments.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        callable_candidates [label="callable-candidates.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        constructor_verifier [label="constructor-verifier.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        enclosing_function [label="enclosing-function.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        exported_types [label="exported-types.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        fetch_calls [label="fetch-calls.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        interface_dispatch [label="interface-dispatch.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        member_call_by_file [label="member-call-by-file.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        mixed_chain [label="mixed-chain.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        module_aliased_call [label="module-aliased-call.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        overload_disambiguation [label="overload-disambiguation.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        provider_primary_resolver [label="provider-primary-resolver.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        receiver_resolution [label="receiver-resolution.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        resolve_call_target [label="resolve-call-target.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        resolve_free_call [label="resolve-free-call.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        resolve_member_call [label="resolve-member-call.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        resolve_static_call [label="resolve-static-call.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        routes_call [label="routes.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        seed_cross_file [label="seed-cross-file-receivers.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        single_candidate [label="single-candidate.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      }
+    }
+
+    // Call processor edges
+    call_proc_barrel -> exported_types [label="ExportedTypeMap, OverloadHints", color="#D4A017"];
+    call_proc_barrel -> seed_cross_file [label="seedCrossFileReceiverTypes", color="#D4A017"];
+    call_proc_barrel -> process_calls [label="(process-calls)", color="#D4A017"];
+    call_proc_barrel -> resolve_call_target [label="(resolve-call-target)", color="#D4A017"];
+    call_proc_barrel -> resolve_member_call [label="(resolve-member-call)", color="#D4A017"];
+    call_proc_barrel -> resolve_free_call [label="(resolve-free-call)", color="#D4A017"];
+    call_proc_barrel -> resolve_static_call [label="(resolve-static-call)", color="#D4A017"];
+    call_proc_barrel -> process_calls_extracted [label="(process-calls-from-extracted)", color="#D4A017"];
+    call_proc_barrel -> assignments [label="(assignments)", color="#D4A017"];
+    call_proc_barrel -> routes_call [label="(routes)", color="#D4A017"];
+    call_proc_barrel -> fetch_calls [label="(fetch-calls)", color="#D4A017"];
+    call_proc_barrel -> call_proc_types [label="(types)", color="#D4A017"];
+
+    // === SUBGRAPH: COBOL Processing ===
+    subgraph cluster_cobol {
+      label="cobol/ + cobol-processor/ + cobol-preprocessor/";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      cobol_barrel [label="cobol/cobol-preprocessor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      cobol_copy [label="cobol/cobol-copy-expander.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      jcl_parser [label="cobol/jcl-parser.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      jcl_processor [label="cobol/jcl-processor.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+
+      cobol_proc_barrel [label="cobol-processor.ts (barrel)", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      cobol_const [label="cobol-processor/constants.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+      cobol_detectors [label="cobol-processor/detectors.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      cobol_graph_mapper [label="cobol-processor/graph-mapper.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      cobol_process_main [label="cobol-processor/process-main.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      cobol_types [label="cobol-processor/types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+      cobol_helpers [label="cobol-processor/helpers/ (3 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+    }
+
+    // === SUBGRAPH: Scope Extraction ===
+    subgraph cluster_scope {
+      label="scope-extractor/ (10 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      scope_barrel [label="scope-extractor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      scope_extract [label="scope-extractor/extract.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      scope_types [label="scope-extractor/types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+
+      subgraph cluster_scope_helpers {
+        label="scope-extractor/helpers/ (7 files)";
+        fontsize=10;
+        fontcolor="#C8960E";
+        style="filled";
+        color="#3A3A1E";
+        fillcolor="#2E2E1E";
+
+        capture_utils [label="capture-utils.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        declarations [label="declarations.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        imports_h [label="imports.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        partition [label="partition.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        references_h [label="references.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        scope_builder [label="scope-builder.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        type_bindings [label="type-bindings.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      }
+    }
+
+    // === SUBGRAPH: Type Environment ===
+    subgraph cluster_type_env {
+      label="type-env/ (12 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      type_env_barrel [label="type-env.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      type_env_build [label="type-env/build.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      type_env_types [label="type-env/types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+      type_env_constants [label="type-env/constants.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+      seed_imports [label="type-env/seed-imports.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+
+      subgraph cluster_te_helpers {
+        label="type-env/helpers/ (7 files)";
+        fontsize=10;
+        fontcolor="#C8960E";
+        style="filled";
+        color="#3A3A1E";
+        fillcolor="#2E2E1E";
+
+        class_lookup [label="class-lookup.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        field_resolution [label="field-resolution.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        fixpoint [label="fixpoint.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        inheritance [label="inheritance.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        method_return [label="method-return.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        scope_lookup [label="scope-lookup.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+        substitute_this [label="substitute-this.ts", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      }
+    }
+
+    // === SUBGRAPH: Languages ===
+    subgraph cluster_languages {
+      label="languages/ (per-language: 19 + subdirs: 60 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      lang_index [label="languages/index.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      // Language provider
+      lang_provider [label="language-provider.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      lang_config [label="language-config.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+
+      // Per-language modules
+      typescript_l [label="typescript/ (14 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      python_l [label="python/ (13 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      go_l [label="go/ (20 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      csharp_l [label="csharp/ (15 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      other_l [label="cobol, java, kotlin, php,\nruby, rust, swift, dart, vue, c-cpp", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+    }
+
+    // === SUBGRAPH: Type Extractors ===
+    subgraph cluster_type_extractors {
+      label="type-extractors/ + shared/ + jvm/ (15 files + subdirs)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      te_shared [label="shared.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_shared_dir [label="shared/ (9 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      te_jvm [label="jvm/ (shared + java + kotlin)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+
+      // Per-language type extractors
+      te_typescript [label="typescript.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_python [label="python.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_go [label="go.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_rust [label="rust.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_java [label="jvm.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_csharp [label="csharp.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_cpp [label="c-cpp.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_php [label="php.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_ruby [label="ruby.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_swift [label="swift.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      te_dart [label="dart.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    }
+
+    // === SUBGRAPH: Extractors (method, field, variable, class, heritage, call, import) ===
+    subgraph cluster_extractors {
+      label="Extractor Groups (method/field/variable/class/heritage/call/import)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      // Each extractor group has generic.ts + configs/ with per-language files
+      method_extractors [label="method-extractors/ (generic + 11 configs)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      field_extractors [label="field-extractors/ (generic + 12 configs)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      variable_extractors [label="variable-extractors/ (generic + 11 configs)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      class_extractors [label="class-extractors/ (generic + 11 configs)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      heritage_extractors [label="heritage-extractors/ (generic + 2 configs)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      call_extractors [label="call-extractors/ (generic + 11 configs)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      import_resolvers [label="import-resolvers/ (12 files + 11 configs)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+    }
+
+    // === SUBGRAPH: Named Bindings ===
+    subgraph cluster_named_bindings {
+      label="named-bindings/ (8 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      nb_typescript [label="typescript.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      nb_python [label="python.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      nb_java [label="java.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      nb_kotlin [label="kotlin.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      nb_csharp [label="csharp.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      nb_php [label="php.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      nb_rust [label="rust.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      nb_types [label="types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+    }
+
+    // === SUBGRAPH: Route Extractors ===
+    subgraph cluster_route_extract {
+      label="route-extractors/ (5 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      nextjs_routes [label="nextjs.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      expo_routes [label="expo.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      php_routes [label="php.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      resp_shapes [label="response-shapes.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      mid_routes [label="middleware.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    }
+
+    // === SUBGRAPH: Parsing Processor + Workers ===
+    subgraph cluster_parsing {
+      label="parsing-processor/ + workers/ (12 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      parsing_proc_barrel [label="parsing-processor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      parsing_process [label="parsing-processor/process-parsing.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      parsing_types [label="parsing-processor/types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+      parsing_helpers [label="parsing-processor/helpers/ (2)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+
+      worker_pool [label="workers/worker-pool.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      parse_worker_barrel [label="workers/parse-worker.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+      pw_process_batch [label="parse-worker/process-batch.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      pw_process_group [label="parse-worker/process-file-group.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      pw_constants [label="parse-worker/constants.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+      pw_types [label="parse-worker/types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+      pw_helpers [label="parse-worker/helpers/ (4)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+    }
+
+    // === SUBGRAPH: Scope Resolution ===
+    subgraph cluster_scope_resolution {
+      label="scope-resolution/ (21 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      sr_contract [label="contract/scope-resolver.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      sr_graph_bridge [label="graph-bridge/ (6 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      sr_passes [label="passes/ (6 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      sr_pipeline [label="pipeline/ (5 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      sr_scope [label="scope/ (2 files)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+      sr_index [label="workspace-index.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    }
+
+    // === SUBGRAPH: Model ===
+    subgraph cluster_model {
+      label="model/ (11 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      model_index [label="index.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      model_types [label="(semantic-model, symbol-table, type-registry,\nfield-registry, method-registry, heritage-map, etc)", fillcolor="#B8860B", fontcolor="#FFFFFF"];
+    }
+
+    // === SUBGRAPH: Tree-sitter Queries ===
+    subgraph cluster_tsq {
+      label="tree-sitter-queries/ (13 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      tsq_index [label="index.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      tsq_ts [label="typescript.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_py [label="python.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_java [label="java.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_go [label="go.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_cs [label="csharp.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_rust [label="rust.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_php [label="php.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_ruby [label="ruby.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_kt [label="kotlin.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_swift [label="swift.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_dart [label="dart.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      tsq_c_family [label="c-family.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    }
+
+    // === SUBGRAPH: Utils ===
+    subgraph cluster_utils {
+      label="utils/ (9 files)";
+      fontsize=11;
+      fontcolor="#D4A017";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      ast_helpers [label="ast-helpers.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      call_analysis [label="call-analysis.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      event_loop [label="event-loop.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      graph_sort [label="graph-sort.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      max_file_size [label="max-file-size.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      method_props [label="method-props.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      verbose [label="verbose.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      env [label="env.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+      ruby_self_call [label="ruby-self-call.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    }
+
+    // === Top-level processors ===
+    structure_proc [label="structure-processor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    community_proc [label="community-processor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    process_proc [label="process-processor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    markdown_proc [label="markdown-processor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    heritage_proc [label="heritage-processor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    import_proc [label="import-processor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    mro_proc [label="mro-processor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    fs_walker [label="filesystem-walker.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    binding_acc [label="binding-accumulator.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    ast_cache [label="ast-cache.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    vue_sfc [label="vue-sfc-extractor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    entry_point_scoring [label="entry-point-scoring.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    export_detection [label="export-detection.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    framework_detection [label="framework-detection.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    registry_primary [label="registry-primary-flag.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    cpp_ue_preprocess [label="cpp-ue-preprocessor.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    finalize_orch [label="finalize-orchestrator.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    emit_references [label="emit-references.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    resolve_references [label="resolve-references.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    call_routing [label="call-routing.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    call_types [label="call-types.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+    scope_extractor_bridge [label="scope-extractor-bridge.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    import_target_adapter [label="import-target-adapter.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    cluster_enricher [label="cluster-enricher.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    shadow_harness [label="shadow-harness.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    field_extractor_ts [label="field-extractor.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    method_types_ts [label="method-types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+    field_types_ts [label="field-types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+    variable_types_ts [label="variable-types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+    class_types_ts [label="class-types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+    heritage_types_ts [label="heritage-types.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+    constants_ig [label="constants.ts", fillcolor="#C8960E", fontcolor="#FFFFFF", style="dashed"];
+  }
+
+  // External deps (selected major ones)
+  pipeline -> knowledge_graph_types [label="KnowledgeGraph", color="#F5A623", style="dashed"];
+  pipeline -> pipeline_result_type [label="PipelineResult", color="#95A5A6", style="dashed"];
+  import_proc -> parser_loader_ig [label="loadParser, loadLanguage", color="#D4A017", style="dashed"];
+  import_proc -> generate_id [label="generateId", color="#95A5A6", style="dashed"];
+  heritage_proc -> parser_loader_ig [label="loadParser, loadLanguage", color="#D4A017", style="dashed"];
+  heritage_proc -> generate_id [label="generateId", color="#95A5A6", style="dashed"];
+  structure_proc -> generate_id [label="generateId", color="#95A5A6", style="dashed"];
+  community_proc -> portability_ig [label="getPortability", color="#F5A623", style="dashed"];
+  community_proc -> generated_constants_ig [label="DEV_APP_ROOT_URL", color="#95A5A6", style="dashed"];
+  community_proc -> knowledge_graph_types [label="KnowledgeGraph", color="#F5A623", style="dashed"];
+  process_proc -> knowledge_graph_types [label="KnowledgeGraph", color="#F5A623", style="dashed"];
+  markdown_proc -> generate_id [label="generateId", color="#95A5A6", style="dashed"];
+  mro_proc -> generate_id [label="generateId", color="#95A5A6", style="dashed"];
+  mro_proc -> model_resolve [label="c3Linearize", color="#D4A017", style="dashed"];
+  process_proc -> community_proc [label="CommunityMembership", color="#D4A017", style="dashed"];
+  process_proc -> entry_point_scoring [label="calculateEntryPointScore, isTestFile", color="#D4A017", style="dashed"];
+  fs_walker -> ignore_service [label="createIgnoreFilter", color="#95A5A6", style="dashed"];
+  fs_walker -> logger_ig [label="logger", color="#F5A623", style="dashed"];
+  import_proc -> logger_ig [label="logger", color="#F5A623", style="dashed"];
+  pipeline -> logger_ig [label="logger", color="#F5A623", style="dashed"];
+
+  parser_loader_ig [label="core/tree-sitter/parser-loader.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  portability_ig [label="core/portability/index.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  knowledge_graph_types [label="core/graph/types.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  generate_id [label="lib/utils.ts", color="#95A5A6", fontcolor="#FFFFFF"];
+  pipeline_result_type [label="types/pipeline.ts", color="#95A5A6", fontcolor="#FFFFFF"];
+  ignore_service [label="config/ignore-service.ts", color="#95A5A6", fontcolor="#FFFFFF"];
+  logger_ig [label="core/logger.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  model_resolve [label="model/resolve.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  generated_constants_ig [label="generated/constants.ts", color="#95A5A6", fontcolor="#FFFFFF"];
+}

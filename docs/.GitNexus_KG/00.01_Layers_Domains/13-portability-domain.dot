@@ -1,0 +1,76 @@
+digraph Portability_Domain {
+  rankdir=TB;
+  label="GitNexus Portability Domain — core/portability/";
+  fontsize=16;
+  fontname="Consolas";
+  compound=true;
+  bgcolor="#1E1E2E";
+  fontcolor="#CDD6F4";
+  edge [fontname="Consolas", fontsize=9];
+  node [fontname="Consolas", fontsize=10, style="filled", shape="box"];
+
+  subgraph cluster_portability {
+    label="Portability Domain (core/portability/)";
+    fontsize=14;
+    fontcolor="#F5A623";
+    style="filled";
+    color="#F5A623";
+    fillcolor="#2E2E1E";
+
+    index_p [label="index.ts (barrel)", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+    contract [label="contract.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+
+    // Two implementations
+    portable_impl [label="PortableContract\n(inside contract.ts)", fillcolor="#D4A017", fontcolor="#FFFFFF", shape="box3d"];
+    dev_impl [label="DevContract\n(inside contract.ts)", fillcolor="#D4A017", fontcolor="#FFFFFF", shape="box3d"];
+
+    // PortabilityContract interface
+    contract_interface [label="PortabilityContract interface\n(inside contract.ts)", fillcolor="#F5A623", fontcolor="#FFFFFF", shape="note"];
+
+    // Edges
+    contract -> generated_constants_p [label="IS_PORTABLE_BUILD, DEV_APP_ROOT_URL", color="#95A5A6", style="dashed"];
+    index_p -> contract [label="PortableContract, DevContract", color="#F5A623"];
+    index_p -> generated_constants_p [label="IS_PORTABLE_BUILD", color="#95A5A6", style="dashed"];
+
+    // Interface relationship
+    contract_interface -> portable_impl [label="implements", color="#F5A623", style="dotted"];
+    contract_interface -> dev_impl [label="implements", color="#F5A623", style="dotted"];
+  }
+
+  // Consumers (across the codebase)
+  subgraph cluster_consumers {
+    label="Portability Consumers";
+    fontsize=12;
+    fontcolor="#F5A623";
+    style="filled";
+    color="#4A4A2E";
+    fillcolor="#2E2E1E";
+
+    cli_setup [label="cli/setup.ts", fillcolor="#4A90D9", fontcolor="#FFFFFF"];
+    cli_ai_context [label="cli/ai-context.ts", fillcolor="#4A90D9", fontcolor="#FFFFFF"];
+    cli_optional_grammars [label="cli/optional-grammars.ts", fillcolor="#4A90D9", fontcolor="#FFFFFF"];
+    cli_analyze [label="cli/analyze.ts", fillcolor="#4A90D9", fontcolor="#FFFFFF"];
+    server_analyze [label="server/routes/analyze.ts", fillcolor="#50B86C", fontcolor="#FFFFFF"];
+    embedder_p [label="core/embeddings/embedder.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    provider_p [label="core/embeddings/provider.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    community_processor_p [label="core/ingestion/community-processor.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    parse_impl_p [label="core/ingestion/pipeline-phases/parse-impl.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    config_emb_p [label="core/embeddings/config.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    run_analyze_p [label="core/run-analyze.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+  }
+
+  // Edges from consumers to portability
+  cli_setup -> index_p [label="getPortability", color="#4A90D9", style="dashed"];
+  cli_ai_context -> index_p [label="getPortability", color="#4A90D9", style="dashed"];
+  cli_optional_grammars -> index_p [label="getPortability", color="#4A90D9", style="dashed"];
+  cli_analyze -> index_p [label="getPortability", color="#4A90D9", style="dashed"];
+  server_analyze -> index_p [label="getPortability", color="#50B86C", style="dashed"];
+  embedder_p -> index_p [label="getPortability", color="#D4A017", style="dashed"];
+  provider_p -> index_p [label="getPortability", color="#D4A017", style="dashed"];
+  community_processor_p -> index_p [label="getPortability", color="#D4A017", style="dashed"];
+  parse_impl_p -> index_p [label="getPortability", color="#D4A017", style="dashed"];
+  config_emb_p -> index_p [label="loadPortableConfig", color="#D4A017", style="dashed"];
+  run_analyze_p -> index_p [label="(embedding mode uses portability)", color="#D4A017", style="dashed"];
+
+  generated_constants_p [label="generated/constants.ts", color="#95A5A6", fontcolor="#FFFFFF"];
+}

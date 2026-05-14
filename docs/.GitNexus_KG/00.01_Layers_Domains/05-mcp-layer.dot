@@ -1,0 +1,199 @@
+digraph MCP_Layer {
+  rankdir=LR;
+  label="GitNexus MCP Layer — Architecture & Internal Dependencies";
+  fontsize=16;
+  fontname="Consolas";
+  compound=true;
+  bgcolor="#1E1E2E";
+  fontcolor="#CDD6F4";
+  edge [fontname="Consolas", fontsize=9];
+  node [fontname="Consolas", fontsize=10, style="filled", shape="box"];
+
+  subgraph cluster_mcp {
+    label="MCP Layer (src/mcp/)";
+    fontsize=14;
+    fontcolor="#50B86C";
+    style="filled";
+    color="#50B86C";
+    fillcolor="#1E2E2E";
+
+    server [label="server.ts", fillcolor="#50B86C", fontcolor="#FFFFFF", shape="diamond"];
+    tools [label="tools.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF", style="dashed"];
+    resources [label="resources.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF", style="dashed"];
+    staleness [label="staleness.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF", style="dashed"];
+    stdio_context [label="stdio-context.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+    stdio_capture [label="stdio-capture.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+    compatible_stdio [label="compatible-stdio-transport.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+    embedder_mcp [label="core/embedder.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+    lbug_adapter_mcp [label="core/lbug-adapter.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF"];
+
+    subgraph cluster_local {
+      label="local/";
+      fontsize=12;
+      fontcolor="#50B86C";
+      style="filled";
+      color="#3A6B4C";
+      fillcolor="#1E2E2E";
+
+      local_backend [label="local-backend.ts", fillcolor="#5CC47A", fontcolor="#FFFFFF", shape="diamond"];
+
+      subgraph cluster_helpers {
+        label="helpers/";
+        fontsize=11;
+        fontcolor="#6BD48A";
+        style="filled";
+        color="#2A5B3C";
+        fillcolor="#1E2E2E";
+
+        api_tools [label="api-tools.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        constants_h [label="constants.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF", style="dashed"];
+        context_tools [label="context-tools.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        detect_changes [label="detect-changes.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        graph_queries [label="graph-queries.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        group_h [label="group.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        impact [label="impact.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        logging [label="logging.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        rename [label="rename.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        search [label="search.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        state_manager [label="state-manager.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        symbol_resolution [label="symbol-resolution.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        tool_dispatch [label="tool-dispatch.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF"];
+        types_h [label="types.ts", fillcolor="#6BD48A", fontcolor="#FFFFFF", style="dashed"];
+      }
+    }
+
+    // Internal: server imports
+    server -> compatible_stdio [label="CompatibleStdioServerTransport", color="#50B86C"];
+    server -> tools [label="GITNEXUS_TOOLS", color="#50B86C"];
+    server -> stdio_context [label="installGlobalStdoutSentinel", color="#50B86C"];
+    server -> resources [label="getResourceDefinitions, getResourceTemplates", color="#50B86C"];
+    server -> local_backend [label="LocalBackend", color="#50B86C"];
+    resources -> staleness [label="checkStaleness", color="#50B86C"];
+    resources -> local_backend [label="LocalBackend", color="#50B86C"];
+    compatible_stdio -> stdio_context [label="withMcpWrite", color="#50B86C"];
+    stdio_context -> stdio_capture [label="realStdoutWrite, setActiveStdoutWrite", color="#50B86C"];
+
+    // Internal: local-backend barrel → helpers
+    local_backend -> tool_dispatch [label="dispatchTool", color="#50B86C"];
+    local_backend -> state_manager [label="StateManager", color="#50B86C"];
+    local_backend -> context_tools [label="executeCypher, formatCypherAsMarkdown", color="#50B86C"];
+    local_backend -> impact [label="executeImpactByUid", color="#50B86C"];
+    local_backend -> graph_queries [label="queryClusters, queryProcesses", color="#50B86C"];
+    local_backend -> group_h [label="readGroupContractsResource, etc", color="#50B86C"];
+    local_backend -> constants_h [label="isTestFilePath, VALID_NODE_LABELS", color="#50B86C"];
+    local_backend -> types_h [label="RepoHandle", color="#50B86C"];
+
+    // Internal: helper-to-helper imports
+    tool_dispatch -> group_h [label="dispatchGroupTool, callToolAtGroupRepo", color="#6BD48A"];
+    tool_dispatch -> search [label="executeQueryTool", color="#6BD48A"];
+    tool_dispatch -> context_tools [label="executeContext, executeCypher", color="#6BD48A"];
+    tool_dispatch -> impact [label="executeImpact", color="#6BD48A"];
+    tool_dispatch -> detect_changes [label="executeDetectChanges", color="#6BD48A"];
+    tool_dispatch -> rename [label="executeRename", color="#6BD48A"];
+    tool_dispatch -> api_tools [label="executeRouteMap, executeShapeCheck", color="#6BD48A"];
+    tool_dispatch -> graph_queries [label="queryClusters, queryProcesses", color="#6BD48A"];
+    tool_dispatch -> state_manager [label="StateManager", color="#6BD48A"];
+    tool_dispatch -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    context_tools -> logging [label="logQueryError", color="#6BD48A"];
+    context_tools -> symbol_resolution [label="aggregateClusters", color="#6BD48A"];
+    context_tools -> state_manager [label="StateManager", color="#6BD48A"];
+    context_tools -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    detect_changes -> logging [label="logQueryError", color="#6BD48A"];
+    detect_changes -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    graph_queries -> symbol_resolution [label="aggregateClusters", color="#6BD48A"];
+    graph_queries -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    group_h -> search [label="executeQueryTool", color="#6BD48A"];
+    group_h -> context_tools [label="executeContext", color="#6BD48A"];
+    group_h -> impact [label="executeImpact", color="#6BD48A"];
+    group_h -> state_manager [label="StateManager", color="#6BD48A"];
+    group_h -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    impact -> logging [label="logQueryError", color="#6BD48A"];
+    impact -> constants_h [label="isTestFilePath, VALID_RELATION_TYPES", color="#6BD48A"];
+    impact -> symbol_resolution [label="resolveSymbolCandidates", color="#6BD48A"];
+    impact -> state_manager [label="StateManager", color="#6BD48A"];
+    impact -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    rename -> logging [label="logQueryError", color="#6BD48A"];
+    rename -> context_tools [label="executeContext", color="#6BD48A"];
+    rename -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    search -> logging [label="logQueryError, logQueryTiming", color="#6BD48A"];
+    search -> constants_h [label="VALID_NODE_LABELS", color="#6BD48A"];
+    search -> state_manager [label="StateManager", color="#6BD48A"];
+    search -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    state_manager -> types_h [label="CodebaseContext, RepoHandle", color="#6BD48A"];
+
+    symbol_resolution -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    api_tools -> logging [label="logQueryError", color="#6BD48A"];
+    api_tools -> types_h [label="RepoHandle", color="#6BD48A"];
+
+    logging -> types_h [label="(via logger)", color="#6BD48A"];
+
+    types_h -> listRegisteredRepos_type [label="RegistryEntry", color="#9B59B6", style="dashed"];
+  }
+
+  // External: MCP → Core (lbug, embeddings, etc)
+  server -> get_version_mcp [label="getVersion", color="#F5A623", style="dashed"];
+  staleness -> check_staleness_mcp [label="checkStaleness", color="#F5A623", style="dashed"];
+  staleness -> staleness_info_mcp [label="StalenessInfo", color="#F5A623", style="dashed"];
+
+  embedder_mcp -> resolve_embedding_config_mcp [label="resolveEmbeddingConfig", color="#F5A623", style="dashed"];
+  embedder_mcp -> http_client_mcp [label="getHttpDimensions, httpEmbed", color="#F5A623", style="dashed"];
+  embedder_mcp -> hf_env_mcp [label="applyHfEnvOverrides", color="#F5A623", style="dashed"];
+  embedder_mcp -> pool_adapter_mcp [label="silenceStdout, restoreStdout", color="#F5A623", style="dashed"];
+  embedder_mcp -> logger_mcp [label="logger", color="#F5A623", style="dashed"];
+
+  lbug_adapter_mcp -> pool_adapter_mcp [label="(re-exports)", color="#F5A623", style="dashed"];
+
+  // Helper-to-Core external deps
+  api_tools -> pool_adapter_mcp [label="executeQuery, executeParameterized", color="#F5A623", style="dashed"];
+  context_tools -> pool_adapter_mcp [label="executeParameterized", color="#F5A623", style="dashed"];
+  context_tools -> lbug_config_mcp [label="isWalCorruptionError", color="#F5A623", style="dashed"];
+  detect_changes -> pool_adapter_mcp [label="executeParameterized", color="#F5A623", style="dashed"];
+  detect_changes -> parse_diff_hunks_git [label="parseDiffHunks", color="#9B59B6", style="dashed"];
+  graph_queries -> pool_adapter_mcp [label="executeQuery, executeParameterized", color="#F5A623", style="dashed"];
+  group_h -> resolve_at_member_mcp [label="resolveAtGroupMemberRepoPath", color="#F5A623", style="dashed"];
+  impact -> pool_adapter_mcp [label="executeParameterized", color="#F5A623", style="dashed"];
+  impact -> lbug_config_mcp [label="isWalCorruptionError", color="#F5A623", style="dashed"];
+  logging -> logger_mcp [label="logger", color="#F5A623", style="dashed"];
+  search -> pool_adapter_mcp [label="executeParameterized", color="#F5A623", style="dashed"];
+  search -> embedding_types_mcp [label="collectBestChunks", color="#F5A623", style="dashed"];
+  search -> exact_search_mcp [label="(exact-search symbols)", color="#F5A623", style="dashed"];
+  search -> lbug_schema_mcp [label="EMBEDDING_TABLE_NAME", color="#F5A623", style="dashed"];
+  search -> runtime_capabilities_mcp [label="(platform capabilities)", color="#F5A623", style="dashed"];
+  search -> phase_timer_mcp [label="PhaseTimer", color="#F5A623", style="dashed"];
+  search -> logger_mcp [label="logger", color="#F5A623", style="dashed"];
+  state_manager -> pool_adapter_mcp [label="executeParameterized", color="#F5A623", style="dashed"];
+  state_manager -> repo_manager_mcp [label="listRegisteredRepos", color="#9B59B6", style="dashed"];
+  state_manager -> git_staleness_mcp [label="checkStalenessAsync", color="#F5A623", style="dashed"];
+  state_manager -> logger_mcp [label="logger", color="#F5A623", style="dashed"];
+  state_manager -> group_service_mcp [label="GroupService", color="#F5A623", style="dashed"];
+  symbol_resolution -> pool_adapter_mcp [label="executeParameterized", color="#F5A623", style="dashed"];
+
+  get_version_mcp [label="core/environment.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  check_staleness_mcp [label="core/git-staleness.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  resolve_embedding_config_mcp [label="core/embeddings/config.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  http_client_mcp [label="core/embeddings/http-client.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  hf_env_mcp [label="core/embeddings/hf-env.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  pool_adapter_mcp [label="core/lbug/pool-adapter.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  logger_mcp [label="core/logger.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  lbug_config_mcp [label="core/lbug/lbug-config.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  resolve_at_member_mcp [label="core/group/resolve-at-member.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  embedding_types_mcp [label="core/embeddings/types.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  exact_search_mcp [label="core/embeddings/exact-search.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  lbug_schema_mcp [label="core/lbug/schema.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  runtime_capabilities_mcp [label="core/platform/capabilities.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  phase_timer_mcp [label="core/search/phase-timer.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  repo_manager_mcp [label="storage/repo-manager.ts", color="#9B59B6", fontcolor="#FFFFFF"];
+  git_staleness_mcp [label="core/git-staleness.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  group_service_mcp [label="core/group/service.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  parse_diff_hunks_git [label="storage/git.ts", color="#9B59B6", fontcolor="#FFFFFF"];
+  listRegisteredRepos_type [label="storage/repo-manager.ts", color="#9B59B6", fontcolor="#FFFFFF"];
+}

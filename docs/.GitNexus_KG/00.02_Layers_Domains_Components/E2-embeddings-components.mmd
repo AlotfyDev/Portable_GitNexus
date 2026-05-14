@@ -1,0 +1,111 @@
+%% Embeddings Domain — Component Dependency Graph
+%% Color: #E8DAEF (light purple)
+
+flowchart LR
+  classDef embed fill:#E8DAEF,stroke:#8E44AD,stroke-width:1px
+  classDef ext fill:#F0F0F0,stroke:#999,stroke-width:1px,stroke-dasharray:3
+  classDef barrel fill:#E8DAEF,stroke:#8E44AD,stroke-width:2px,stroke-dasharray:5,5
+
+  subgraph Core["core/embeddings/"]
+    direction TB
+    idx["index.ts\n(barrel)"]:::barrel
+    types["types.ts\nEmbeddingConfig, EmbeddableNode\nCachedEmbedding, SemanticSearchResult\nDEFAULT_EMBEDDING_CONFIG\nisShortLabel, STRUCTURAL_LABELS\nCHUNKING_RULES, dedupBestChunks\ncollectBestChunks"]:::embed
+    provider["provider.ts\nEmbeddingProvider(interface)\nWasmPortableProvider\nCpuPortableProvider\nNativeNodeProvider\nselectProvider(), getAvailableProviders()"]:::embed
+    embedder["embedder.ts\nEmbedder(class)\ninitEmbedder(), embedText()\nembedBatch(), disposeEmbedder()\ngetEmbedder(), isEmbedderReady()\ngetEmbeddingDimensions()\nembeddingToArray()"]:::embed
+    config["config.ts\nresolveEmbeddingConfig()"]:::embed
+    http["http-client.ts\nhttpEmbed(), httpEmbedQuery()\nisHttpMode(), getHttpDimensions()"]:::embed
+    hfenv["hf-env.ts\napplyHfEnvOverrides()\nisHfDownloadFailure()\nwithHfDownloadRetry()"]:::embed
+    pipeline["embedding-pipeline.ts\nrunEmbeddingPipeline()\nsemanticSearch()\ncontentHashForNode()\nbatchInsertEmbeddings()\nEMBEDDING_TEXT_VERSION"]:::embed
+    textgen["text-generator.ts\ngenerateEmbeddingText()\nextractDeclarationOnly()"]:::embed
+    chunker["chunker.ts\nchunkNode()"]:::embed
+    cchunk["character-chunk.ts\ncharacterChunk()"]:::embed
+    lineIdx["line-index.ts\nbuildLineIndex()\nresolveChunkLines()"]:::embed
+    astUtils["ast-utils.ts\nensureAndParse()\nfindDeclarationNode()\nfindFunctionNode()"]:::embed
+    structExt["structural-extractor.ts\nextractStructuralNames()"]:::embed
+    exactSearch["exact-search.ts\nrankExactEmbeddingRows()\ncosineDistance()"]:::embed
+    cacheLoader["cache-loader.ts\nloadEmbeddingCache()\nrestoreCachedEmbeddings()"]:::embed
+    diagnostic["diagnostic.ts\nlogPerLabelNodeCounts()"]:::embed
+    serverMap["server-mapping.ts\nreadServerMapping()"]:::embed
+  end
+
+  subgraph External["External Dependencies"]
+    portability["portability/index.ts\ngetPortability()"]:::ext
+    portableCfg["config/portable-config.ts\nloadPortableConfig()\nresolveConfigPath()"]:::ext
+    platCaps["platform/capabilities.ts\ndefaultEmbeddingThreads()\ngetExactScanLimit()"]:::ext
+    logger["logger.ts"]:::ext
+    lbugAd["lbug/lbug-adapter.ts\nloadCachedEmbeddings()"]:::ext
+    lbugRepo["lbug/repository/\nembedding-repository.ts\nEmbeddingRepository"]:::ext
+    vecReg["vector-store/registry.ts\ncreateEmbeddingRepository()"]:::ext
+    ingIdx["ingestion/languages/index.ts\ngetProviderForFile()"]:::ext
+    methodTypes["ingestion/method-types.ts"]:::ext
+    fieldTypes["ingestion/field-types.ts"]:::ext
+    langProv["ingestion/language-provider.ts"]:::ext
+    typeEnv["ingestion/type-env.ts\nbuildTypeEnv()"]:::ext
+    shared["gitnexus-shared\nSupportedLanguages\nresilientFetch"]:::ext
+    tsParser["tree-sitter/parser-loader.ts"]:::ext
+    consts["generated/constants.js\nDEV_APP_ROOT_URL"]:::ext
+  end
+
+  %% Internal edges
+  config --> types
+  config --> platCaps
+  config --> portableCfg
+
+  provider --> types
+  provider --> portability
+  provider --> portableCfg
+
+  embedder --> types
+  embedder --> http
+  embedder --> config
+  embedder --> hfenv
+  embedder --> provider
+  embedder --> portability
+  embedder --> logger
+  embedder --> consts
+
+  pipeline --> embedder
+  pipeline --> textgen
+  pipeline --> chunker
+  pipeline --> structExt
+  pipeline --> types
+  pipeline --> config
+  pipeline --> exactSearch
+  pipeline --> lbugRepo
+  pipeline --> platCaps
+  pipeline --> vecReg
+  pipeline --> logger
+
+  structExt --> astUtils
+  structExt --> ingIdx
+  structExt --> methodTypes
+  structExt --> fieldTypes
+  structExt --> langProv
+  structExt --> typeEnv
+  structExt --> shared
+
+  chunker --> cchunk
+  chunker --> astUtils
+  chunker --> lineIdx
+  chunker --> types
+
+  cchunk --> lineIdx
+
+  astUtils --> shared
+  astUtils --> tsParser
+
+  textgen --> types
+
+  cacheLoader --> types
+  cacheLoader --> lbugAd
+  cacheLoader --> pipeline
+
+  http --> shared
+  hfenv --> shared
+
+  %% Barrel re-exports
+  idx --> types
+  idx --> http
+  idx --> embedder
+  idx --> textgen
+  idx --> pipeline

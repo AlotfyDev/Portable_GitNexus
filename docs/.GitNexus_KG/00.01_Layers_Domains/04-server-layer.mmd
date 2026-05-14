@@ -1,0 +1,103 @@
+%% GitNexus Server Layer — Architecture & Internal Dependencies
+%% Colors: green=Server, orange=Core, purple=Storage
+
+graph TB
+  subgraph SERVER["Server Layer (src/server/)"]
+    style SERVER fill:#1E2E2E,stroke:#50B86C,color:#CDD6F4
+
+    api("api.ts (entry)"):::entry
+
+    subgraph ROUTES["Routes"]
+      style ROUTES fill:#1E2E2E,stroke:#3A6B4C,color:#CDD6F4
+      routes_index("routes/index.ts"):::barrel
+      analyze_route("routes/analyze.ts"):::route
+      embedding_route("routes/embedding.ts"):::route
+      file_route("routes/file.ts"):::route
+      graph_route("routes/graph.ts"):::route
+      health_route("routes/health.ts"):::route
+      processes_route("routes/processes.ts"):::route
+      query_route("routes/query.ts"):::route
+      repos_route("routes/repos.ts"):::route
+      search_route("routes/search.ts"):::route
+    end
+
+    subgraph MIDDLEWARE["Middleware"]
+      style MIDDLEWARE fill:#1E2E2E,stroke:#3A6B4C,color:#CDD6F4
+      middleware_index("middleware/index.ts"):::barrel
+      cors("middleware/cors.ts"):::mid
+      error_handler("middleware/error-handler.ts"):::mid
+      repo_resolver("middleware/repo-resolver.ts"):::mid
+    end
+
+    streaming("streaming.ts"):::util
+    validation("validation.ts"):::util
+    types_srv("types.ts"):::util
+    config_srv("config.ts"):::util
+    shutdown("shutdown.ts"):::util
+    web_ui("web-ui.ts"):::util
+    analyze_job("analyze-job.ts"):::util
+    analyze_worker("analyze-worker.ts"):::util
+    git_clone("git-clone.ts"):::util
+    mcp_http("mcp-http.ts"):::util
+
+    routes_index -->|mountHealth| health_route
+    routes_index -->|mountRepos| repos_route
+    routes_index -->|mountGraph| graph_route
+    routes_index -->|mountQuery| query_route
+    routes_index -->|mountSearch| search_route
+    routes_index -->|mountFile| file_route
+    routes_index -->|mountProcesses| processes_route
+    routes_index -->|mountAnalyze| analyze_route
+    routes_index -->|mountEmbedding| embedding_route
+
+    analyze_route -->|mountSSEProgress| streaming
+    analyze_route -->|createRouteLimiter| validation
+    analyze_route -->|extractRepoName, getCloneDir| git_clone
+    analyze_route -->|createRepoLockManager| repo_resolver
+    embedding_route -->|mountSSEProgress| streaming
+    embedding_route -->|createRouteLimiter| validation
+    embedding_route -->|createRepoResolver, createRepoLockManager| repo_resolver
+    file_route -->|createRouteLimiter, assertString| validation
+    file_route -->|createRepoResolver, requestedRepo| repo_resolver
+    file_route -->|statusFromError| error_handler
+    graph_route -->|createRepoResolver, requestedRepo| repo_resolver
+    graph_route -->|SSE streaming functions| streaming
+    processes_route -->|requestedRepo| repo_resolver
+    processes_route -->|statusFromError| error_handler
+    query_route -->|createRepoResolver, requestedRepo| repo_resolver
+    repos_route -->|createRepoResolver, createRepoLockManager| repo_resolver
+    repos_route -->|createRouteLimiter| validation
+    repos_route -->|getCloneDir| git_clone
+    search_route -->|createRepoResolver, requestedRepo| repo_resolver
+    cors -->|ServerConfig| config_srv
+    error_handler -->|BadRequestError| validation
+    middleware_index -->|isAllowedOrigin| cors
+    repo_resolver -->|listRegisteredRepos| listRegisteredRepos_s
+  end
+
+  error_handler -.->|logger| logger_core_s("core/logger.ts"):::core
+  repo_resolver -.->|logger| logger_core_s
+  analyze_route -.->|logger| logger_core_s
+  analyze_route -.->|getPortability| portability_s("core/portability/index.ts"):::core
+  analyze_route -.->|getStoragePath| get_storage_path_s("storage/repo-manager.ts"):::storage
+  embedding_route -.->|withLbugDb, executeQuery| lbug_adapter_s("core/lbug/lbug-adapter.ts"):::core
+  file_route -.->|withLbugDb, executeQuery| lbug_adapter_s
+  graph_route -.->|withLbugDb, executeQuery| lbug_adapter_s
+  health_route -.->|getVersion| get_version_s("core/environment.ts"):::core
+  query_route -.->|withLbugDb, executeQuery| lbug_adapter_s
+  query_route -.->|isWriteQuery| pool_adapter_s("core/lbug/pool-adapter.ts"):::core
+  repos_route -.->|closeLbug| lbug_adapter_s
+  repos_route -.->|listRegisteredRepos, loadMeta| repo_manager_s("storage/repo-manager.ts"):::storage
+  search_route -.->|withLbugDb, executeQuery| lbug_adapter_s
+  search_route -.->|hybridSearch| hybrid_search_s("core/search/hybrid-search.ts"):::core
+  search_route -.->|searchFTSFromLbug| bm25_index_s("core/search/bm25-index.ts"):::core
+  repo_resolver -.->|LocalBackend| local_backend_s("mcp/local/local-backend.ts"):::mcp
+
+  classDef entry fill:#50B86C,stroke:#50B86C,color:#FFFFFF
+  classDef route fill:#5CC47A,stroke:#50B86C,color:#FFFFFF
+  classDef mid fill:#6BD48A,stroke:#50B86C,color:#FFFFFF
+  classDef barrel fill:#6BD48A,stroke:#50B86C,color:#FFFFFF,stroke-dasharray:5 5
+  classDef util fill:#6BD48A,stroke:#50B86C,color:#FFFFFF
+  classDef core fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+  classDef storage fill:#9B59B6,stroke:#9B59B6,color:#FFFFFF
+  classDef mcp fill:#50B86C,stroke:#50B86C,color:#FFFFFF

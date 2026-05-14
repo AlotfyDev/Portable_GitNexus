@@ -1,0 +1,132 @@
+%% GitNexus Cross-Layer Dependency Graph — Edges Between Layers
+%% Edge widths represent dependency weight (number of imports)
+%% Colors: blue=CLI, green=Server/MCP, orange=Core, purple=Storage, gray=Infra
+
+graph LR
+  subgraph LEGEND["Edge Weight Legend"]
+    style LEGEND fill:#2E2E3E,stroke:#3E3E4E,color:#CDD6F4
+    L1("1-2 imports"):::thin
+    L2("3-5 imports"):::thin
+    L3("6-10 imports"):::thin
+    L4("10+ imports"):::thin
+    L5("critical path (heavy usage)"):::thin
+    L1 -.->|thin| L2
+    L2 ==>|medium| L3
+    L3 ===|thick| L4
+    L4 ===|heaviest| L5
+  end
+
+  cli("CLI Layer\n22 files"):::cli
+  server("Server Layer\n25 files"):::srv
+  mcp("MCP Layer\n24 files"):::srv
+  core_analyze("Core: Analyze\n4 files"):::core
+  core_embeddings("Core: Embeddings\n18 files"):::core
+  core_ingestion("Core: Ingestion\n~142 files"):::core
+  core_portability("Core: Portability\n2 files"):::core
+  core_lbug("Core: LBUG\n15 files"):::core
+  core_graph("Core: Graph\n2 files"):::core
+  core_search("Core: Search\n5 files"):::core
+  core_treesitter("Core: Tree-sitter\n17 files"):::core
+  core_platform("Core: Platform\n1 file"):::core
+  core_wiki("Core: Wiki\n7 files"):::core
+  core_group("Core: Group\n16 files"):::core
+  core_vectorstore("Core: Vector Store\n6 files"):::core
+  core_augmentation("Core: Augment\n1 file"):::core
+  core_environment("Core: Environment\n1 file"):::core
+  core_logger("Core: Logger\n1 file"):::core
+  core_git_staleness("Core: Git Staleness\n1 file"):::core
+  storage("Storage Layer\n12 files"):::storage
+  config("Config Layer\n5 files"):::infra
+  generated("Generated\n1 file"):::infra
+  lib("Lib\n1 file"):::infra
+  types("Types\n1 file"):::infra
+
+  %% CLI → Core (heavy)
+  cli ===|"14 files import logger"| core_logger
+  cli ==>|"10 files import finalizer/types/phases"| core_analyze
+  cli ==>|"wiki generator + LLM + cursor"| core_wiki
+  cli ==>|"skill-gen: community-processor, etc"| core_ingestion
+  cli -->|"doctor: config, http-client"| core_embeddings
+  cli -->|"setup, ai-context: getPortability"| core_portability
+  cli -->|"augment: engine"| core_augmentation
+  cli -->|"doctor: capabilities"| core_platform
+  cli -->|"index, setup: getVersion"| core_environment
+  cli -->|"analyze: closeLbug"| core_lbug
+  cli -->|"skill-gen: KnowledgeGraph types"| core_graph
+
+  %% CLI → Storage (heavy)
+  cli ===|"8 files import repo-manager + git"| storage
+
+  %% CLI → Infra
+  cli -->|"optional-grammars: DEV_APP_ROOT_URL"| generated
+  cli -->|"skill-gen: PipelineResult"| types
+
+  %% CLI → Server/MCP
+  cli -->|"serve: createServer"| server
+  cli ==>|"eval-server, tool: LocalBackend"| mcp
+
+  %% Server → Core (heavy)
+  server ===|"9 routes import lbug-adapter/pool-adapter"| core_lbug
+  server -->|"analyze route: getPortability"| core_portability
+  server -->|"health: getVersion"| core_environment
+  server ==>|"4 files import logger"| core_logger
+  server -->|"search route: hybridSearch"| core_search
+
+  %% Server → Storage
+  server ==>|"analyze, repos routes: repo-manager"| storage
+
+  %% Server → MCP
+  server -->|"repo-resolver: LocalBackend"| mcp
+
+  %% MCP → Core (VERY heavy)
+  mcp ===|"ALL helpers import pool-adapter"| core_lbug
+  mcp ==>|"search helper: types, exact-search"| core_embeddings
+  mcp -->|"server: getVersion"| core_environment
+  mcp ==>|"4 files import logger"| core_logger
+  mcp ==>|"staleness, state-manager"| core_git_staleness
+  mcp ==>|"group helper"| core_group
+  mcp -->|"search: PhaseTimer"| core_search
+  mcp -->|"search: capabilities"| core_platform
+
+  %% MCP → Storage
+  mcp ==>|"state-manager: repo-manager"| storage
+
+  %% Core (Analyze) → Everything
+  core_analyze ===|"run-analyze: pipeline (critical path)"| core_ingestion
+  core_analyze ==>|"run-analyze: cache-loader"| core_embeddings
+  core_analyze ==>|"run-analyze: lbug-adapter"| core_lbug
+  core_analyze -->|"run-analyze: fts-indexes"| core_search
+  core_analyze -->|"run-analyze: embedding-mode"| core_environment
+  core_analyze ==>|"finalizer: repo-manager + git"| storage
+  core_analyze -->|"finalizer: ai-context"| cli
+
+  %% Core Embeddings → Dependencies
+  core_embeddings ==>|"embedder, provider: getPortability"| core_portability
+  core_embeddings ==>|"cache-loader, pipeline: repository"| core_lbug
+  core_embeddings -->|"config, pipeline: capabilities"| core_platform
+  core_embeddings -->|"structural-extractor: languages"| core_ingestion
+  core_embeddings -->|"ast-utils: parser-loader"| core_treesitter
+  core_embeddings -->|"pipeline: registry"| core_vectorstore
+  core_embeddings -->|"embedder, pipeline: logger"| core_logger
+  core_embeddings ==>|"config, provider: portable-config"| config
+  core_embeddings -->|"embedder: DEV_APP_ROOT_URL"| generated
+
+  %% Core Ingestion → Dependencies
+  core_ingestion ===|"8+ files: KnowledgeGraph types"| core_graph
+  core_ingestion ===|"import-processor, heritage-processor: parser-loader"| core_treesitter
+  core_ingestion ===|"15+ files: logger"| core_logger
+  core_ingestion ==>|"community-processor, parse-impl"| core_portability
+  core_ingestion ==>|"8+ files: generateId"| lib
+  core_ingestion -->|"filesystem-walker: ignore-service"| config
+  core_ingestion -->|"community-processor: DEV_APP_ROOT_URL"| generated
+  core_ingestion -->|"pipeline: PipelineResult"| types
+
+  %% Portability → Infra
+  core_portability -->|"IS_PORTABLE_BUILD"| generated
+
+  classDef cli fill:#4A90D9,stroke:#4A90D9,color:#FFFFFF
+  classDef srv fill:#50B86C,stroke:#50B86C,color:#FFFFFF
+  classDef core fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+  classDef storage fill:#9B59B6,stroke:#9B59B6,color:#FFFFFF
+  classDef infra fill:#95A5A6,stroke:#95A5A6,color:#FFFFFF
+  classDef thin fill:#585B70,stroke:#585B70,color:#FFFFFF

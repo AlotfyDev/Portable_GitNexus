@@ -1,0 +1,205 @@
+digraph G {
+  rankdir=TB;
+  splines=curved;
+  nodesep=0.6;
+  ranksep=0.8;
+  compound=true;
+  fontname="Consolas";
+  edge [fontname="Consolas" fontsize=9];
+  graph [dpi=150 bgcolor="#FDFEFE"];
+
+  // ─── Architectural Layers (9 top-level clusters) ───────────────────
+  // Layer order (top→bottom for readability):
+  //   CLI → Server → MCP → Core → Config → Storage → Types → Lib → Generated
+  //
+  // Color scheme — each layer gets a distinct hue:
+  //   CLI:     #E74C3C (red)
+  //   Server:  #E67E22 (orange)
+  //   MCP:     #F1C40F (yellow/gold)
+  //   Core:    #3498DB (blue)
+  //   Config:  #95A5A6 (gray)
+  //   Storage: #9B59B6 (purple)
+  //   Types:   #1ABC9C (teal)
+  //   Lib:     #BDC3C7 (light gray)
+  //   Generated: #D5D8DC (silver)
+
+  // ────────────────────────────────────────────────────────────────────
+  // CLI LAYER
+  // ────────────────────────────────────────────────────────────────────
+  subgraph cluster_cli {
+    label="1. CLI Layer (src/cli/) — 22 commands";
+    style="filled,rounded";
+    color="#E74C3C";
+    fillcolor="#FDEDEC";
+    fontcolor="#C0392B";
+    fontsize=11;
+
+    cli [label="analyze.ts / serve.ts / status.ts / list.ts\nmcp.ts / remove.ts / wiki.ts / ..." shape=box style="filled,rounded" fillcolor="#E74C3C" fontcolor=white];
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // SERVER LAYER
+  // ────────────────────────────────────────────────────────────────────
+  subgraph cluster_server {
+    label="2. Server Layer (src/server/) — HTTP/WS API";
+    style="filled,rounded";
+    color="#E67E22";
+    fillcolor="#FDF2E9";
+    fontcolor="#CA6F1E";
+    fontsize=11;
+
+    server [label="api.ts / analyze-job.ts\nanalyze-worker.ts / config.ts\ngit-clone.ts / mcp-http.ts\nshutdown.ts / streaming.ts\nweb-ui.ts / types.ts" shape=box style="filled,rounded" fillcolor="#E67E22" fontcolor=white];
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // MCP LAYER
+  // ────────────────────────────────────────────────────────────────────
+  subgraph cluster_mcp {
+    label="3. MCP Layer (src/mcp/) — Model Context Protocol";
+    style="filled,rounded";
+    color="#F1C40F";
+    fillcolor="#FEF9E7";
+    fontcolor="#B7950B";
+    fontsize=11;
+
+    mcp [label="server.ts / tools.ts / resources.ts\ncompatible-stdio-transport.ts\nstaleness.ts / stdio-capture.ts\nstdio-context.ts" shape=box style="filled,rounded" fillcolor="#D4AC0D" fontcolor=white];
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // CORE LAYER
+  // ────────────────────────────────────────────────────────────────────
+  subgraph cluster_core {
+    label="4. Core Layer (src/core/) — Pipeline Engine";
+    style="filled,rounded";
+    color="#3498DB";
+    fillcolor="#EBF5FB";
+    fontcolor="#2E86C1";
+    fontsize=11;
+
+    core [label="analyze / graph / ingestion / embeddings\nlbug / search / wiki / group\nportability / platform / sidecar\ntree-sitter / vector-store / augmentation" shape=box style="filled,rounded" fillcolor="#3498DB" fontcolor=white];
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // CONFIG LAYER
+  // ────────────────────────────────────────────────────────────────────
+  subgraph cluster_config {
+    label="5. Config Layer (src/config/)";
+    style="filled,rounded";
+    color="#95A5A6";
+    fillcolor="#F8F9F9";
+    fontcolor="#7F8C8D";
+    fontsize=11;
+
+    config [label="portable-config.ts\nignore-service.ts\nsupported-languages.ts\nindex.ts (barrel)" shape=box style="filled,rounded" fillcolor="#95A5A6" fontcolor=white];
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // STORAGE LAYER
+  // ────────────────────────────────────────────────────────────────────
+  subgraph cluster_storage {
+    label="6. Storage Layer (src/storage/) — Repo Manager";
+    style="filled,rounded";
+    color="#9B59B6";
+    fillcolor="#F4ECF7";
+    fontcolor="#7D3C98";
+    fontsize=11;
+
+    storage [label="repo-manager.ts (barrel)\nrepo-manager/{types,constants,errors,\npaths,meta,config,gitignore,\nfinalization,registry/}\ngit.ts" shape=box style="filled,rounded" fillcolor="#9B59B6" fontcolor=white];
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // TYPES LAYER
+  // ────────────────────────────────────────────────────────────────────
+  subgraph cluster_types {
+    label="7. Types Layer (src/types/)";
+    style="filled,rounded";
+    color="#1ABC9C";
+    fillcolor="#E8F8F5";
+    fontcolor="#148F77";
+    fontsize=11;
+
+    types [label="pipeline.ts\nPipelineResult" shape=box style="filled,rounded" fillcolor="#1ABC9C" fontcolor=white];
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // LIB LAYER
+  // ────────────────────────────────────────────────────────────────────
+  subgraph cluster_lib {
+    label="8. Library Layer (src/lib/)";
+    style="filled,rounded";
+    color="#BDC3C7";
+    fillcolor="#F8F9F9";
+    fontcolor="#7F8C8D";
+    fontsize=11;
+
+    lib [label="utils.ts\ngenerateId()" shape=box style="filled,rounded" fillcolor="#BDC3C7"];
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // GENERATED LAYER
+  // ────────────────────────────────────────────────────────────────────
+  subgraph cluster_generated {
+    label="9. Generated Constants (src/generated/)";
+    style="filled,rounded";
+    color="#D5D8DC";
+    fillcolor="#FDFEFE";
+    fontcolor="#7F8C8D";
+    fontsize=11;
+
+    generated [label="constants.ts\n(auto-generated)\nGITNEXUS_VERSION\nIS_PORTABLE_BUILD\nDEV_APP_ROOT_URL\nEMBEDDINGS_ENABLED" shape=box style="filled,rounded" fillcolor="#D5D8DC"];
+  }
+
+  // ─── CRITICAL PATH HIGHLIGHTS ──────────────────────────────────────
+  // Path A: Index Write  (red, penwidth=3)
+  // Path B: Query Read   (blue, penwidth=3)
+  // Path C: Server API   (green, penwidth=3)
+
+  // ─── AGGREGATED CROSS-LAYER EDGES ──────────────────────────────────
+
+  // 1. CLI → everything
+  cli -> server [label="  createServer()" color="#E67E22" style=dashed weight=1];
+  cli -> mcp [label="  installGlobalStdoutSentinel\nLocalBackend" color="#D4AC0D" style=dashed weight=1];
+  cli -> core [label="  runFullAnalysis, logger\ngetPortability, KnowledgeGraph\ncloseLbug, getVersion\nresolveLLMConfig, getRuntimeCaps\n✦ INDEX WRITE PATH ✦" color="#E74C3C" penwidth=3 weight=5];
+  cli -> core [label="  findRepo, streamQuery\n✦ QUERY READ PATH ✦" color="#3498DB" penwidth=3 weight=5];
+  cli -> storage [label="  findRepo, getStoragePaths\nhasIndex, listRegisteredRepos\ngetGlobalDir, getCurrentCommit\ngetGitRoot, getRemoteUrl" color="#9B59B6" weight=3];
+  cli -> types [label="  PipelineResult" color="#1ABC9C" style=dashed weight=1];
+  cli -> generated [label="  DEV_APP_ROOT_URL" color="#D5D8DC" style=dashed weight=1];
+
+  // 2. Server → config + core + mcp
+  server -> config [label="  loadPortableConfig()" color="#95A5A6" weight=2];
+  server -> core [label="  logger, getPortability\nrunFullAnalysis, closeLbug\n✦ SERVER API PATH ✦" color="#27AE60" penwidth=3 weight=5];
+  server -> mcp [label="  createMCPServer()\nLocalBackend" color="#D4AC0D" weight=2];
+
+  // 3. MCP → core
+  mcp -> core [label="  checkStaleness\ngetVersion" color="#3498DB" weight=2];
+
+  // 4. Core → config + generated + lib + mcp + storage + types + cli
+  core -> config [label="  createIgnoreFilter\nloadPortableConfig" color="#95A5A6" weight=2];
+  core -> generated [label="  IS_PORTABLE_BUILD\nDEV_APP_ROOT_URL" color="#D5D8DC" weight=2];
+  core -> lib [label="  generateId()" color="#BDC3C7" style=dashed weight=1];
+  core -> mcp [label="  realStdoutWrite\nrealStderrWrite" color="#D4AC0D" weight=2];
+  core -> storage [label="  getRemoteUrl, hasGitDir\nlistRegisteredRepos, readRegistry\nsaveMeta, registerRepo\nensureGitNexusIgnored\n✦ INDEX WRITE PATH ✦" color="#9B59B6" penwidth=3 weight=5];
+  core -> types [label="  PipelineResult" color="#1ABC9C" style=dashed weight=1];
+  core -> cli [label="  generateAIContextFiles" color="#E74C3C" style=dashed weight=1];
+
+  // 5. Config → core
+  config -> core [label="  getPortability()\nlogger" color="#3498DB" weight=2];
+
+  // 6. Types → core
+  types -> core [label="  KnowledgeGraph\nCommunityDetectionResult\nProcessDetectionResult" color="#3498DB" style=dashed weight=1];
+
+  // ─── CRITICAL PATH LEGEND ──────────────────────────────────────────
+  subgraph cluster_legend {
+    label="★ Three Critical Paths";
+    style="filled,rounded";
+    color="#ABB2B9";
+    fillcolor="#FDFEFE";
+    fontsize=11;
+
+    legend [shape=plaintext label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="4">
+      <TR><TD BGCOLOR="#E74C3C" WIDTH="20" HEIGHT="10"></TD><TD><B>Index Write</B>: cli → core (runFullAnalysis) → storage (saveMeta/registerRepo) + config (ignore/portable)</TD></TR>
+      <TR><TD BGCOLOR="#3498DB" WIDTH="20" HEIGHT="10"></TD><TD><B>Query Read</B>: cli → core (streamQuery/findRepo via lbug-adapter) → storage (findRepo/getStoragePaths)</TD></TR>
+      <TR><TD BGCOLOR="#27AE60" WIDTH="20" HEIGHT="10"></TD><TD><B>Server API</B>: server → core (runFullAnalysis/closeLbug) + config (loadPortableConfig) + mcp (createMCPServer)</TD></TR>
+    </TABLE>>];
+  }
+}

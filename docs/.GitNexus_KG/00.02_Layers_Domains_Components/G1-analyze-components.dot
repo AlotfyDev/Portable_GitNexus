@@ -1,0 +1,77 @@
+digraph AnalyzeComponents {
+  rankdir=TB;
+  splines=ortho;
+  node [shape=box, style="filled,rounded", fillcolor="#D6EAF8", fontname="Consolas", fontsize=10];
+  edge [color="#555555", fontname="Consolas", fontsize=9];
+
+  // ── Analyze core ──
+  subgraph cluster_analyze_core {
+    label="core/analyze/";
+    fillcolor="#EBF5FB";
+    style=filled;
+    color="#85C1E9";
+
+    types [label="types.ts\nAnalyzeOptions\nAnalyzeResult\nAnalyzeCallbacks"];
+    phases [label="phases.ts\nPHASE_LABELS"];
+    finalizer [label="finalizer.ts\ncountEmbeddings()\nbuildMeta()\ncomputeClusterSummary()\nFinalizeInput / FinalizeOutput"];
+  }
+
+  // ── Orchestrator ──
+  subgraph cluster_orchestrator {
+    label="core/ (orchestrator)";
+    fillcolor="#EBF5FB";
+    style=filled;
+    color="#85C1E9";
+
+    run_analyze [label="run-analyze.ts\nrunFullAnalysis()"];
+  }
+
+  // ── Internal edges ──
+  finalizer -> types [label="AnalyzeOptions"];
+  run_analyze -> types [style=dashed, label="re-exports type"];
+  run_analyze -> phases [style=dashed, label="re-exports PHASE_LABELS"];
+  run_analyze -> finalizer [label="countEmbeddings(), buildMeta()"];
+
+  // ── External dependencies ──
+  node [fillcolor="#F0F0F0", style="rounded"];
+
+  pipeline [label="ingestion/pipeline.ts\nrunPipelineFromRepo()"];
+  lbug_adapter [label="lbug/lbug-adapter.ts\ninitLbug, loadGraphToLbug\ngetLbugStats, executeQuery\nexecuteWithReusedStatement\ncloseLbug"];
+  fts [label="search/fts-indexes.ts\ncreateSearchFTSIndexes()"];
+  repo_mgr [label="storage/repo-manager.ts\ngetStoragePaths, loadMeta\nsaveMeta, registerRepo\nensureGitNexusIgnored\ncleanupOldKuzuFiles"];
+  git [label="storage/git.ts\ngetCurrentCommit, hasGitDir\ngetInferredRepoName\nresolveRepoIdentityRoot\ngetRemoteUrl"];
+  schema [label="lbug/schema.ts\nSTALE_HASH_SENTINEL\nEMBEDDING_TABLE_NAME"];
+
+  cache_loader [label="embeddings/cache-loader.ts\nloadEmbeddingCache()\nrestoreCachedEmbeddings()"];
+  diagnostic [label="embeddings/diagnostic.ts\nlogPerLabelNodeCounts()"];
+  http_client [label="embeddings/http-client.ts\nisHttpMode()"];
+  embedding_pipeline [label="embeddings/embedding-pipeline.ts\nrunEmbeddingPipeline()"];
+  server_mapping [label="embeddings/server-mapping.ts\nreadServerMapping()"];
+  embed_mode [label="embedding-mode.ts\nderiveEmbeddingMode()\nderiveEmbeddingCap()\nDEFAULT_EMBEDDING_NODE_LIMIT"];
+
+  ai_context [label="cli/ai-context.ts\ngenerateAIContextFiles()"];
+  caps [label="platform/capabilities.ts\ngetRuntimeCapabilities()"];
+
+  // ── External edge from finalizer ──
+  finalizer -> repo_mgr [label="saveMeta(), registerRepo()\nensureGitNexusIgnored()"];
+  finalizer -> git [label="getRemoteUrl(), hasGitDir()"];
+  finalizer -> ai_context [label="generateAIContextFiles()"];
+  finalizer -> schema [label="EMBEDDING_TABLE_NAME"];
+  finalizer -> caps [label="getRuntimeCapabilities()"];
+
+  // ── Run-analyze orchestration edges ──
+  run_analyze -> pipeline [label="Phase 1 (0-60%): runPipelineFromRepo()"];
+  run_analyze -> lbug_adapter [label="Phase 2 (60-85%):\ninitLbug / loadGraphToLbug\ngetLbugStats / closeLbug"];
+  run_analyze -> fts [label="Phase 3 (85-90%):\ncreateSearchFTSIndexes()"];
+  run_analyze -> repo_mgr [label="getStoragePaths(), loadMeta()\ncleanupOldKuzuFiles()"];
+  run_analyze -> git [label="getCurrentCommit(), hasGitDir()\ngetInferredRepoName()\nresolveRepoIdentityRoot()"];
+  run_analyze -> schema [label="STALE_HASH_SENTINEL"];
+  run_analyze -> embed_mode [label="deriveEmbeddingMode()\nderiveEmbeddingCap()\nDEFAULT_EMBEDDING_NODE_LIMIT"];
+
+  // ── Embeddings domain cross-domain edges ──
+  run_analyze -> cache_loader [label="Phase 3.5: loadEmbeddingCache()\nrestoreCachedEmbeddings()"];
+  run_analyze -> diagnostic [label="Phase 4: logPerLabelNodeCounts()"];
+  run_analyze -> http_client [label="Phase 4: isHttpMode()"];
+  run_analyze -> embedding_pipeline [label="Phase 4 (90-98%):\nrunEmbeddingPipeline()"];
+  run_analyze -> server_mapping [label="Phase 4: readServerMapping()"];
+}

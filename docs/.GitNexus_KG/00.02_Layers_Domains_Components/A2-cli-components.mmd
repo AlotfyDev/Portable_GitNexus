@@ -1,0 +1,162 @@
+%% CLI Layer Component Diagram
+%% Entry (blue) → lazy-action dispatches → command modules (lightblue) → core (orange) / storage (purple)
+
+flowchart TB
+  subgraph CLI["CLI Layer (src/cli/)"]
+    direction TB
+    style CLI fill:#F8F9FA,stroke:#D0D5DD
+
+    INDEX(["index.ts (entry)"]):::cliEntry
+    LAZY(["lazy-action.ts (dispatch)"]):::cliUtil
+
+    %% Command files
+    CMD_ANALYZE["analyze.ts<br/>(analyzeCommand)"]:::cliCmd
+    CMD_SETUP["setup.ts<br/>(setupCommand)"]:::cliCmd
+    CMD_SERVE["serve.ts<br/>(serveCommand)"]:::cliCmd
+    CMD_MCP["mcp.ts<br/>(mcpCommand)"]:::cliCmd
+    CMD_LIST["list.ts<br/>(listCommand)"]:::cliCmd
+    CMD_STATUS["status.ts<br/>(statusCommand)"]:::cliCmd
+    CMD_DOCTOR["doctor.ts<br/>(doctorCommand)"]:::cliCmd
+    CMD_CLEAN["clean.ts<br/>(cleanCommand)"]:::cliCmd
+    CMD_REMOVE["remove.ts<br/>(removeCommand)"]:::cliCmd
+    CMD_WIKI["wiki.ts<br/>(wikiCommand)"]:::cliCmd
+    CMD_AUGMENT["augment.ts<br/>(augmentCommand)"]:::cliCmd
+    CMD_PUBLISH["publish.ts<br/>(publishCommand)"]:::cliCmd
+    CMD_TOOL["tool.ts<br/>(query/context/impact/cypher/detectChanges)"]:::cliCmd
+    CMD_EVAL["eval-server.ts<br/>(evalServerCommand)"]:::cliCmd
+    CMD_INDEX["index-repo.ts<br/>(indexCommand)"]:::cliCmd
+    CMD_GROUP["group.ts<br/>(registerGroupCommands)"]:::cliCmd
+
+    %% Utility files
+    UTIL_CLIMSG["cli-message.ts<br/>(cliInfo/cliWarn/cliError)"]:::cliUtil
+    UTIL_OPTGRAM["optional-grammars.ts<br/>(detectMissing/warn)"]:::cliUtil
+    UTIL_AICTX["ai-context.ts<br/>(generateAIContextFiles)"]:::cliUtil
+    UTIL_SKILL["skill-gen.ts<br/>(generateSkillFiles)"]:::cliUtil
+  end
+
+  subgraph CORE["Core Layer (src/core/)"]
+    style CORE fill:#FFF8E1,stroke:#E6A817
+    CORE_RUNANAL["run-analyze.ts<br/>(runFullAnalysis)"]:::core
+    CORE_ENV["environment.ts<br/>(getVersion)"]:::core
+    CORE_LOGGER["logger.ts"]:::core
+    CORE_LBUG["lbug/lbug-adapter.ts<br/>(withLbugDb/closeLbug)"]:::core
+    CORE_PORT["portability/index.ts<br/>(getPortability)"]:::core
+    CORE_PLAT["platform/capabilities.ts"]:::core
+    CORE_EMBCFG["embeddings/config.ts"]:::core
+    CORE_EMBHTTP["embeddings/http-client.ts"]:::core
+    CORE_EMBHF["embeddings/hf-env.ts"]:::core
+    CORE_WIKIGEN["wiki/generator.ts<br/>(WikiGenerator)"]:::core
+    CORE_WIKILLM["wiki/llm-client.ts"]:::core
+    CORE_WIKICURS["wiki/cursor-client.ts"]:::core
+    CORE_AUG["augmentation/engine.ts<br/>(augment)"]:::core
+    CORE_MXFILE["ingestion/utils/max-file-size.ts"]:::core
+    CORE_COMM["ingestion/community-processor.ts"]:::core
+    CORE_PROC["ingestion/process-processor.ts"]:::core
+    CORE_GRAPH["graph/types.ts"]:::core
+    CORE_TYPES["types/pipeline.ts"]:::core
+    CORE_GSTORAGE["group/storage.ts"]:::core
+    CORE_GCFG["group/config-parser.ts"]:::core
+    CORE_GSYNC["group/sync.ts"]:::core
+  end
+
+  subgraph STORAGE["Storage Layer (src/storage/)"]
+    style STORAGE fill:#F3E5F5,stroke:#7B1FA2
+    STO_REPOMGR["repo-manager.ts<br/>(findRepo/listRegisteredRepos/…)"]:::storage
+    STO_GIT["git.ts<br/>(getGitRoot/isGitRepo/…)"]:::storage
+  end
+
+  subgraph MCP["MCP Layer (src/mcp/)"]
+    style MCP fill:#E8F5E9,stroke:#388E3C
+    MCP_LOCAL["local/local-backend.ts<br/>(LocalBackend)"]:::mcp
+    MCP_SRV["server.ts<br/>(startMCPServer)"]:::mcp
+    MCP_STDIO["stdio-context.ts"]:::mcp
+  end
+
+  subgraph SRV["Server Layer (src/server/)"]
+    style SRV fill:#FCE4EC,stroke:#C62828
+    SRV_API["api.ts<br/>(createServer)"]:::srv
+  end
+
+  %% Internal dispatch
+  INDEX -->|"createLazyAction"| LAZY
+  LAZY -.->|"lazy-import"| CMD_ANALYZE
+  LAZY -.->|"lazy-import"| CMD_SETUP
+  LAZY -.->|"lazy-import"| CMD_SERVE
+  LAZY -.->|"lazy-import"| CMD_MCP
+  LAZY -.->|"lazy-import"| CMD_LIST
+  LAZY -.->|"lazy-import"| CMD_STATUS
+  LAZY -.->|"lazy-import"| CMD_DOCTOR
+  LAZY -.->|"lazy-import"| CMD_CLEAN
+  LAZY -.->|"lazy-import"| CMD_REMOVE
+  LAZY -.->|"lazy-import"| CMD_WIKI
+  LAZY -.->|"lazy-import"| CMD_AUGMENT
+  LAZY -.->|"lazy-import"| CMD_PUBLISH
+  LAZY -.->|"lazy-import"| CMD_TOOL
+  LAZY -.->|"lazy-import"| CMD_EVAL
+  LAZY -.->|"lazy-import"| CMD_INDEX
+  INDEX -->|"registerGroupCommands"| CMD_GROUP
+
+  %% CLI command → Core edges
+  CMD_ANALYZE -->|"runFullAnalysis"| CORE_RUNANAL
+  CMD_ANALYZE -->|"closeLbug"| CORE_LBUG
+  CMD_ANALYZE --->|"getMaxFileSizeBanner"| CORE_MXFILE
+  CMD_ANALYZE --->|"isHfDownloadFailure"| CORE_EMBHF
+  CMD_SETUP -->|"getVersion"| CORE_ENV
+  CMD_SETUP --->|"getPortability"| CORE_PORT
+  CMD_SERVE -->|"logger"| CORE_LOGGER
+  CMD_MCP -.->|"startMCPServer"| MCP_SRV
+  CMD_MCP -.->|"LocalBackend"| MCP_LOCAL
+  CMD_MCP -.->|"installGlobalStdoutSentinel"| MCP_STDIO
+  CMD_DOCTOR -->|"capabilities"| CORE_PLAT
+  CMD_DOCTOR -->|"embeddingConfig"| CORE_EMBCFG
+  CMD_DOCTOR -->|"isHttpMode"| CORE_EMBHTTP
+  CMD_WIKI -->|"WikiGenerator"| CORE_WIKIGEN
+  CMD_WIKI -->|"resolveLLMConfig"| CORE_WIKILLM
+  CMD_WIKI -->|"detectCursorCLI"| CORE_WIKICURS
+  CMD_AUGMENT -->|"augment"| CORE_AUG
+  CMD_GROUP -.->|"dynamic import"| CORE_GSTORAGE
+  CMD_GROUP -.->|"dynamic import"| CORE_GCFG
+  CMD_GROUP -.->|"dynamic import"| CORE_GSYNC
+  CMD_GROUP -.->|"LocalBackend"| MCP_LOCAL
+  CMD_TOOL -->|"LocalBackend"| MCP_LOCAL
+  CMD_EVAL -->|"LocalBackend"| MCP_LOCAL
+
+  %% CLI command → Storage edges
+  CMD_ANALYZE -->|"getStoragePaths/…"| STO_REPOMGR
+  CMD_ANALYZE -->|"getGitRoot/hasGitDir"| STO_GIT
+  CMD_SETUP -->|"getGlobalDir"| STO_REPOMGR
+  CMD_LIST -->|"listRegisteredRepos"| STO_REPOMGR
+  CMD_STATUS -->|"findRepo/getStoragePaths"| STO_REPOMGR
+  CMD_STATUS -->|"getCurrentCommit/isGitRepo"| STO_GIT
+  CMD_CLEAN -->|"findRepo/unregisterRepo"| STO_REPOMGR
+  CMD_REMOVE -->|"readRegistry/unregisterRepo"| STO_REPOMGR
+  CMD_WIKI -->|"getStoragePaths/loadMeta"| STO_REPOMGR
+  CMD_WIKI -->|"getGitRoot"| STO_GIT
+  CMD_PUBLISH -->|"hasIndex"| STO_REPOMGR
+  CMD_PUBLISH -->|"getGitRoot/remoteOrigin/commit"| STO_GIT
+  CMD_INDEX -->|"getStoragePaths/registerRepo"| STO_REPOMGR
+  CMD_INDEX -->|"getGitRoot/getRemoteUrl"| STO_GIT
+
+  %% Utility internal edges
+  CMD_ANALYZE -.->|"cliError"| UTIL_CLIMSG
+  CMD_ANALYZE -.->|"warnMissingOptionalGrammars"| UTIL_OPTGRAM
+  CMD_SERVE -.->|"cliError"| UTIL_CLIMSG
+  CMD_REMOVE -.->|"cliError"| UTIL_CLIMSG
+  CMD_PUBLISH -.->|"cliInfo/cliError"| UTIL_CLIMSG
+  CMD_EVAL -.->|"cliInfo/cliWarn"| UTIL_CLIMSG
+  CMD_TOOL -.->|"cliError"| UTIL_CLIMSG
+  UTIL_OPTGRAM -.->|"cliWarn"| UTIL_CLIMSG
+  UTIL_AICTX -->|"logger"| CORE_LOGGER
+  UTIL_AICTX -->|"getPortability"| CORE_PORT
+
+  %% Cross-layer: serve → server api
+  CMD_SERVE -->|"createServer"| SRV_API
+
+  %% Styling
+  classDef cliEntry fill:#4A90D9,color:#fff,stroke:#2D6EAA
+  classDef cliCmd fill:#B8D4F0,color:#000,stroke:#8BB8E0
+  classDef cliUtil fill:#E8E8E8,color:#000,stroke:#CCC
+  classDef core fill:#F5A623,color:#fff,stroke:#D4891A
+  classDef storage fill:#9B59B6,color:#fff,stroke:#7D3C98
+  classDef mcp fill:#66BB6A,color:#fff,stroke:#388E3C
+  classDef srv fill:#EF5350,color:#fff,stroke:#C62828

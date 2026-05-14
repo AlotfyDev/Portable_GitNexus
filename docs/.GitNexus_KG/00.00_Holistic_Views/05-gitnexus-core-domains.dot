@@ -1,0 +1,308 @@
+digraph GitNexus_Core_Domains {
+  rankdir=TB;
+  splines=ortho;
+  compound=true;
+  pad=0.5;
+  fontsize=12;
+  fontname="Segoe UI";
+  newrank=true;
+
+  // ── Color palette ──────────────────────────────────────────────────────
+  // lightblue  = pipeline infrastructure
+  // lightgreen = embeddings
+  // lightyellow = portability
+  // lightpink = graph/group
+  // lightcyan = storage/query
+  // lightcoral = platform/sidecar
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DOMAIN 1: INGESTION PIPELINE
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_ingestion {
+    label="Domain: Ingestion Pipeline (core/ingestion/)";
+    style=filled;
+    fillcolor="#D6EAF8";
+    color="#2980B9";
+    fontcolor="#1A5276";
+
+    // Phase nodes
+    PH_Scan [label="Phase: Scan\npipeline-phases/scan.ts\nfilesystem-walker.ts\ndiscovers files" shape=box style=filled fillcolor="#AED6F1"];
+
+    PH_Structure [label="Phase: Structure\npipeline-phases/structure.ts\nstructure-processor.ts\nfile-node scaffolding" shape=box style=filled fillcolor="#AED6F1"];
+
+    PH_Markdown [label="Phase: Markdown\npipeline-phases/markdown.ts\nmarkdown-processor.ts\ndoc extraction" shape=box style=filled fillcolor="#85C1E9"];
+
+    PH_Cobol [label="Phase: Cobol\npipeline-phases/cobol.ts\ncobol-processor.ts\ncobol/ — COBOL/JCL parsing\ncobol-preprocessor/" shape=box style=filled fillcolor="#85C1E9"];
+
+    PH_Parse [label="Phase: Parse\npipeline-phases/parse.ts\nparsing-processor.ts\nworkers/parse-worker/\nworker-pool.ts" shape=box style=filled fillcolor="#AED6F1" penwidth=2];
+
+    PH_Routes [label="Phase: Routes\npipeline-phases/routes.ts\nroute-extractors/\nnextjs / expo / php / middleware" shape=box style=filled fillcolor="#85C1E9"];
+
+    PH_Tools [label="Phase: Tools\npipeline-phases/tools.ts\ncall-processor.ts\ncall-extractors/" shape=box style=filled fillcolor="#85C1E9"];
+
+    PH_ORM [label="Phase: ORM\npipeline-phases/orm.ts\norm-extraction.ts\nframework patterns" shape=box style=filled fillcolor="#85C1E9"];
+
+    PH_CrossFile [label="Phase: CrossFile\npipeline-phases/cross-file.ts\nimport-processor.ts\nscope-resolution/graph-bridge/" shape=box style=filled fillcolor="#AED6F1"];
+
+    PH_ScopeRes [label="Phase: ScopeResolution\npipeline-phases/scopeResolution.ts\nscope-resolution/pipeline/\nscope-extractor/\ntype-env/" shape=box style=filled fillcolor="#AED6F1"];
+
+    PH_MRO [label="Phase: MRO\npipeline-phases/mro.ts\nmro-processor.ts\nmethod resolution order" shape=box style=filled fillcolor="#85C1E9"];
+
+    PH_Communities [label="Phase: Communities\npipeline-phases/communities.ts\ncommunity-processor.ts\ncluster enrichment" shape=box style=filled fillcolor="#85C1E9"];
+
+    PH_Processes [label="Phase: Processes\npipeline-phases/processes.ts\nprocess-processor.ts\nexecution flows" shape=box style=filled fillcolor="#85C1E9"];
+
+    // Sub-components
+    subgraph cluster_languages {
+      label="Language Providers (languages/)";
+      style=filled;
+      fillcolor="#EBF5FB";
+      color="#85C1E9";
+      fontsize=10;
+
+      LANG_TS [label="typescript/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      LANG_PY [label="python/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      LANG_CS [label="csharp/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      LANG_GO [label="go/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      LANG_Other [label="java / kotlin / ruby / rust\nphp / dart / swift / vue\nc-cpp / cobol" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+    }
+
+    subgraph cluster_extractors {
+      label="Extractors (per-language configs/)";
+      style=filled;
+      fillcolor="#EBF5FB";
+      color="#85C1E9";
+      fontsize=10;
+
+      EXT_Call [label="call-extractors/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      EXT_Class [label="class-extractors/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      EXT_Field [label="field-extractors/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      EXT_Heritage [label="heritage-extractors/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      EXT_Method [label="method-extractors/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      EXT_Type [label="type-extractors/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      EXT_Var [label="variable-extractors/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      EXT_Import [label="import-resolvers/" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+    }
+
+    subgraph cluster_model {
+      label="Semantic Model (model/)";
+      style=filled;
+      fillcolor="#EBF5FB";
+      color="#85C1E9";
+      fontsize=10;
+
+      MOD_SymTable [label="symbol-table.ts" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      MOD_Heritage [label="heritage-map.ts" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      MOD_Registry [label="method-registry\nfield-registry\ntype-registry" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      MOD_ResCtx [label="resolution-context.ts" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+      MOD_SemModel [label="semantic-model.ts" shape=box style=filled fillcolor="#D4E6F1" fontsize=9];
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DOMAIN 2: EMBEDDINGS PIPELINE
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_embeddings {
+    label="Domain: Embeddings Pipeline (core/embeddings/)";
+    style=filled;
+    fillcolor="#D5F5E3";
+    color="#27AE60";
+    fontcolor="#1E8449";
+
+    EMB_Provider [label="provider.ts\nAbstract EmbeddingProvider\ninterface" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_HttpClient [label="http-client.ts\nHTTP-based provider\n(portable build)" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_HFEnv [label="hf-env.ts\nHuggingFace download\nmodel caching" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_Chunker [label="chunker.ts\ncharacter-chunk.ts\nChunking strategies\n(for embedding)" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_Embedder [label="embedder.ts\nEmbedding model\ndispatch" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_Pipeline [label="embedding-pipeline.ts\nOrchestrator:\nload → chunk → embed → store" shape=box style=filled fillcolor="#A9DFBF" penwidth=2];
+
+    EMB_Cache [label="cache-loader.ts\nLoad/save cached\nembeddings before rebuild" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_Struct [label="structural-extractor.ts\nAST-aware structural\nchunk extraction" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_Exact [label="exact-search.ts\nFallback exact-match\nsearch (no FTS)" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_Config [label="config.ts\nResolution logic\nfor embedding mode" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_Types [label="types.ts\ncollectBestChunks()\nShared embedding types" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_ServerMap [label="server-mapping.ts\nServer name mapping\nfor HTTP endpoint" shape=box style=filled fillcolor="#A9DFBF"];
+
+    EMB_TextGen [label="text-generator.ts\nText generation\nfor augmentation" shape=box style=filled fillcolor="#A9DFBF"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DOMAIN 3: PORTABILITY
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_portability {
+    label="Domain: Portability (core/portability/)";
+    style=filled;
+    fillcolor="#FDEBD0";
+    color="#E67E22";
+    fontcolor="#CA6F1E";
+
+    PORT_Contract [label="contract.ts\nPortabilityContract (interface)\nisPortable / hasNativeAddons\nhasWorkerPool / hasLeidenAlgorithm\nhasVectorExtension / hasHttpEmbeddings\nhasOnnxRuntimeNode / hasCuda / appDir" shape=box style=filled fillcolor="#F5CBA7" penwidth=2];
+
+    PORT_Portable [label="PortableContract\nPortable build impl\nWASM-based parsers\nHTTP embeddings\nNo worker pool\nNo native addons" shape=box style=filled fillcolor="#F5CBA7"];
+
+    PORT_Dev [label="DevContract\nDevelopment impl\nNative addons\nWorker pool\nNative ONNX + Leiden" shape=box style=filled fillcolor="#F5CBA7"];
+
+    PORT_Index [label="index.ts\ngetPortability() singleton\nselects Portable vs Dev\nbased on IS_PORTABLE_BUILD" shape=box style=filled fillcolor="#F5CBA7"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DOMAIN 4: LADYBUGDB
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_lbug {
+    label="Domain: LadybugDB (core/lbug/)";
+    style=filled;
+    fillcolor="#E8DAEF";
+    color="#8E44AD";
+    fontcolor="#6C3483";
+
+    LBUG_Adapter [label="lbug-adapter.ts\ninitLbug / closeLbug / streamQuery\nexecuteQuery / executeParameterized\nwithLbugDb / loadGraphToLbug\ngetLbugStats / createFTSIndex\nloadCachedEmbeddings / queryFTS" shape=box style=filled fillcolor="#D2B4DE" penwidth=2];
+
+    LBUG_Pool [label="pool-adapter.ts\ninitLbug / executeQuery\nexecuteParameterized / closeLbug\nisWriteQuery / silenceStdout\nWAL corruption recovery" shape=box style=filled fillcolor="#D2B4DE"];
+
+    LBUG_Schema [label="schema.ts\nEMBEDDING_TABLE_NAME\nNODE_TABLES / REL_TABLE_NAME\nCREATE_VECTOR_INDEX_QUERY\nSTALE_HASH_SENTINEL" shape=box style=filled fillcolor="#D2B4DE"];
+
+    LBUG_Repo [label="repository/\nembedding-repository.ts\nLadybugEmbeddingRepository\nCRUD for embeddings" shape=box style=filled fillcolor="#D2B4DE"];
+
+    LBUG_CSV [label="csv-generator.ts\nstreamAllCSVsToDisk\nExport graph as CSV" shape=box style=filled fillcolor="#D2B4DE"];
+
+    LBUG_ExtLoader [label="extension-loader.ts\nExtension manager\nfor DB extensions" shape=box style=filled fillcolor="#D2B4DE"];
+
+    LBUG_Config [label="lbug-config.ts\nisWalCorruptionError\nWAL_RECOVERY_SUGGESTION" shape=box style=filled fillcolor="#D2B4DE"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DOMAIN 5: VECTOR STORE
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_vectorstore {
+    label="Domain: Vector Store (core/vector-store/)";
+    style=filled;
+    fillcolor="#FDEBD0";
+    color="#E67E22";
+    fontcolor="#CA6F1E";
+
+    VS_Provider [label="provider.ts\nIVecDBProvider interface" shape=box style=filled fillcolor="#F5CBA7"];
+    VS_ICM [label="icm-provider.ts\nICM vector DB provider" shape=box style=filled fillcolor="#F5CBA7"];
+    VS_Ladybug [label="ladybug-provider.ts\nLadybugDB vector provider" shape=box style=filled fillcolor="#F5CBA7"];
+    VS_Registry [label="registry.ts\ncreateEmbeddingRepository()\nFactory dispatch" shape=box style=filled fillcolor="#F5CBA7"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DOMAIN 6: SEARCH
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_search {
+    label="Domain: Search (core/search/)";
+    style=filled;
+    fillcolor="#D5F5E3";
+    color="#27AE60";
+    fontcolor="#1E8449";
+
+    SRCH_BM25 [label="bm25-index.ts\nBM25 search index\nsearchFTSFromLbug" shape=box style=filled fillcolor="#A9DFBF"];
+    SRCH_FTS [label="fts-indexes.ts\ncreateSearchFTSIndexes()\nfts-schema.ts" shape=box style=filled fillcolor="#A9DFBF"];
+    SRCH_Hybrid [label="hybrid-search.ts\nhybridSearch()\nCombine BM25 + vector" shape=box style=filled fillcolor="#A9DFBF"];
+    SRCH_PhaseTimer [label="phase-timer.ts\nPhaseTimer utility" shape=box style=filled fillcolor="#A9DFBF"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DOMAIN 7: GROUP / MULTI-REPO
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_group {
+    label="Domain: Group / Multi-Repo (core/group/)";
+    style=filled;
+    fillcolor="#FDEDEC";
+    color="#C0392B";
+    fontcolor="#641E16";
+
+    GRP_Service [label="service.ts\nGroupService\nGroupToolPort" shape=box style=filled fillcolor="#F1948A"];
+    GRP_BridgeDB [label="bridge-db.ts\nContract Bridge DB\nbridge-schema.ts" shape=box style=filled fillcolor="#F1948A"];
+    GRP_ContractExt [label="contract-extractor.ts\nContract extraction\nfrom files/repos" shape=box style=filled fillcolor="#F1948A"];
+    GRP_CrossImpact [label="cross-impact.ts\nCross-repo impact\nanalysis" shape=box style=filled fillcolor="#F1948A"];
+    GRP_Matching [label="matching.ts\nContract matching\nacross repos" shape=box style=filled fillcolor="#F1948A"];
+    GRP_Sync [label="sync.ts\nGroup sync\noperations" shape=box style=filled fillcolor="#F1948A"];
+    GRP_Extractors [label="extractors/\nWorkspace/route/topic\ndetection per language" shape=box style=filled fillcolor="#F1948A"];
+    GRP_ServiceBoundary [label="service-boundary-detector.ts\nService boundary\ndetection" shape=box style=filled fillcolor="#F1948A"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // INTER-DOMAIN EDGES (based on actual imports)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // Ingestion → Model (internal)
+  PH_Parse -> MOD_SymTable [label="writes symbols" fontsize=9 color="#2980B9"];
+  PH_Parse -> MOD_SemModel [label="populates model" fontsize=9 color="#2980B9"];
+  PH_Parse -> EXT_Call [label="call extraction" fontsize=9 color="#2980B9"];
+  PH_Parse -> EXT_Class [label="class extraction" fontsize=9 color="#2980B9"];
+  PH_Parse -> EXT_Method [label="method extraction" fontsize=9 color="#2980B9"];
+  PH_Parse -> EXT_Field [label="field extraction" fontsize=9 color="#2980B9"];
+  PH_Parse -> EXT_Type [label="type resolution" fontsize=9 color="#2980B9"];
+  PH_Parse -> EXT_Var [label="variable extraction" fontsize=9 color="#2980B9"];
+  PH_Parse -> EXT_Import [label="import resolution" fontsize=9 color="#2980B9"];
+  PH_Parse -> EXT_Heritage [label="heritage chain" fontsize=9 color="#2980B9"];
+  PH_Parse -> LANG_TS [label="lang-specific queries" fontsize=9 color="#2980B9"];
+  PH_Parse -> LANG_PY [label="lang-specific queries" fontsize=9 color="#2980B9"];
+  PH_Parse -> LANG_CS [label="lang-specific queries" fontsize=9 color="#2980B9"];
+  PH_Parse -> LANG_GO [label="lang-specific queries" fontsize=9 color="#2980B9"];
+  PH_CrossFile -> MOD_ResCtx [label="scope resolution" fontsize=9 color="#2980B9"];
+  PH_ScopeRes -> MOD_Heritage [label="heritage chains" fontsize=9 color="#2980B9"];
+  PH_ScopeRes -> MOD_Registry [label="registry access" fontsize=9 color="#2980B9"];
+
+  // Pipeline phase edges
+  PH_Scan -> PH_Structure [label="file list" fontsize=9];
+  PH_Structure -> PH_Markdown [label="file nodes" fontsize=9];
+  PH_Structure -> PH_Cobol [label="file nodes" fontsize=9];
+  PH_Structure -> PH_Parse [label="file nodes" fontsize=9];
+  PH_Parse -> PH_Routes [label="extracted calls" fontsize=9];
+  PH_Parse -> PH_Tools [label="extracted calls" fontsize=9];
+  PH_Parse -> PH_ORM [label="extracted ORM" fontsize=9];
+  PH_Routes -> PH_CrossFile [label="route info" fontsize=9];
+  PH_Tools -> PH_CrossFile [label="call info" fontsize=9];
+  PH_ORM -> PH_CrossFile [label="ORM info" fontsize=9];
+  PH_CrossFile -> PH_ScopeRes [label="cross-file refs" fontsize=9];
+  PH_ScopeRes -> PH_MRO [label="resolved model" fontsize=9];
+  PH_MRO -> PH_Communities [label="edges + symbols" fontsize=9];
+  PH_Communities -> PH_Processes [label="clusters" fontsize=9];
+
+  // Embeddings → Rest
+  EMB_Pipeline -> EMB_Provider [label="provider selection" fontsize=9 color="#27AE60"];
+  EMB_Pipeline -> EMB_Chunker [label="chunking" fontsize=9 color="#27AE60"];
+  EMB_Pipeline -> EMB_Embedder [label="embedding" fontsize=9 color="#27AE60"];
+  EMB_Pipeline -> EMB_Cache [label="cache operations" fontsize=9 color="#27AE60"];
+  EMB_Provider -> EMB_HttpClient [label="HTTP provider" fontsize=9 color="#27AE60"];
+  EMB_Provider -> EMB_HFEnv [label="HF model download" fontsize=9 color="#27AE60"];
+
+  // Portability → Rest
+  PORT_Index -> PORT_Contract [label="provides contract" fontsize=9 color="#E67E22"];
+  PORT_Index -> PORT_Portable [label="when IS_PORTABLE_BUILD" fontsize=9 color="#E67E22"];
+  PORT_Index -> PORT_Dev [label="when !IS_PORTABLE_BUILD" fontsize=9 color="#E67E22"];
+
+  // LadybugDB → Rest
+  LBUG_Adapter -> LBUG_Pool [label="pool operations" fontsize=9 color="#8E44AD"];
+  LBUG_Adapter -> LBUG_Schema [label="schema constants" fontsize=9 color="#8E44AD"];
+  LBUG_Adapter -> LBUG_Repo [label="CRUD ops" fontsize=9 color="#8E44AD"];
+  LBUG_Adapter -> LBUG_CSV [label="CSV export" fontsize=9 color="#8E44AD"];
+
+  // Search → LadybugDB
+  SRCH_BM25 -> LBUG_Adapter [label="queryFTS" fontsize=9 color="#8E44AD"];
+  SRCH_FTS -> LBUG_Adapter [label="FTS create" fontsize=9 color="#8E44AD"];
+
+  // Group → Rest
+  GRP_Service -> GRP_BridgeDB [label="bridge queries" fontsize=9 color="#C0392B"];
+  GRP_Service -> GRP_ContractExt [label="contract extract" fontsize=9 color="#C0392B"];
+  GRP_Service -> GRP_Matching [label="match contracts" fontsize=9 color="#C0392B"];
+  GRP_Service -> GRP_CrossImpact [label="impact analysis" fontsize=9 color="#C0392B"];
+
+  // Cross-domain
+  LBUG_Repo -> SRCH_BM25 [label="BM25 integration" fontsize=9 style=dashed];
+  VS_Registry -> LBUG_Repo [label="Ladybug provider" fontsize=9 style=dashed];
+  PORT_Portable -> EMB_HttpClient [label="portable uses HTTP" fontsize=9 style=dashed];
+  PORT_Dev -> LBUG_Pool [label="dev: native pool" fontsize=9 style=dashed];
+}

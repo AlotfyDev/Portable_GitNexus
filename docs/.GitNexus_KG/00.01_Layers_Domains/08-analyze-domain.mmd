@@ -1,0 +1,41 @@
+%% GitNexus Analyze Domain — core/analyze/ + orchestrator
+%% Colors: orange=Core, purple=Storage, blue=CLI
+
+graph TB
+  subgraph ANALYZE["Analyze Domain (core/analyze/ + core/run-analyze.ts)"]
+    style ANALYZE fill:#2E2E1E,stroke:#F5A623,color:#CDD6F4
+
+    run_analyze("core/run-analyze.ts (orchestrator)"):::entry
+
+    subgraph ANALYZE_DIR["core/analyze/"]
+      style ANALYZE_DIR fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      types_an("types.ts"):::barrel
+      phases("phases.ts"):::barrel
+      finalizer("finalizer.ts"):::core
+    end
+
+    run_analyze -->|AnalyzeOptions, AnalyzeResult| types_an
+    run_analyze -->|PHASE_LABELS| phases
+    finalizer -->|AnalyzeOptions| types_an
+  end
+
+  run_analyze -.->|runPipelineFromRepo| ingestion_pipeline("core/ingestion/pipeline.ts"):::core
+  run_analyze -.->|openLbug, closeLbug| lbug_adapter_an("core/lbug/lbug-adapter.ts"):::core
+  run_analyze -.->|createSearchFTSIndexes| fts_indexes("core/search/fts-indexes.ts"):::core
+  run_analyze -.->|loadEmbeddingCache, restoreCachedEmbeddings| cache_loader("core/embeddings/cache-loader.ts"):::core
+  run_analyze -.->|logPerLabelNodeCounts| diagnostic("core/embeddings/diagnostic.ts"):::core
+  run_analyze -.->|countEmbeddings, buildMeta| finalizer
+  run_analyze -.->|embeddingMode| embedding_mode("core/embedding-mode.ts"):::core
+  run_analyze -.->|repo-manager barrel| repo_manager_an("storage/repo-manager.ts"):::storage
+  run_analyze -.->|git storage| git_storage_an("storage/git.ts"):::storage
+  run_analyze -.->|STALE_HASH_SENTINEL| lbug_schema_an("core/lbug/schema.ts"):::core
+  finalizer -.->|saveMeta, registerRepo| repo_manager_an
+  finalizer -.->|getRemoteUrl, hasGitDir| git_storage_an
+  finalizer -.->|EMBEDDING_TABLE_NAME| lbug_schema_an
+  finalizer -.->|generateAIContextFiles| ai_context_cli("cli/ai-context.ts"):::cli
+
+  classDef entry fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+  classDef core fill:#E8B84A,stroke:#F5A623,color:#FFFFFF
+  classDef barrel fill:#E8B84A,stroke:#F5A623,color:#FFFFFF,stroke-dasharray:5 5
+  classDef storage fill:#9B59B6,stroke:#9B59B6,color:#FFFFFF
+  classDef cli fill:#4A90D9,stroke:#4A90D9,color:#FFFFFF

@@ -1,0 +1,262 @@
+%% GitNexus Ingestion Domain — core/ingestion/ (THE BIG ONE)
+%% Colors: orange=Core/business, gray=Infra/external
+%% 142 .ts files across all subdirectories
+
+graph TB
+  subgraph INGEST["Ingestion Domain (core/ingestion/) — 142 files mapped"]
+    style INGEST fill:#2E2E1E,stroke:#F5A623,color:#CDD6F4
+
+    pipeline("pipeline.ts (orchestrator)"):::entry
+
+    subgraph PHASES["pipeline-phases/ (19 files)"]
+      style PHASES fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      phases_index("index.ts"):::barrel
+      types_ph("types.ts"):::barrel
+      scan("scan.ts"):::phase
+      structure("structure.ts"):::phase
+      markdown("markdown.ts"):::phase
+      cobol_ph("cobol.ts"):::phase
+      parse("parse.ts"):::phase
+      parse_impl("parse-impl.ts"):::phase
+      routes_ph("routes.ts"):::phase
+      tools_ph("tools.ts"):::phase
+      orm("orm.ts"):::phase
+      orm_extraction("orm-extraction.ts"):::phase
+      cross_file("cross-file.ts"):::phase
+      cross_file_impl("cross-file-impl.ts"):::phase
+      mro_ph("mro.ts"):::phase
+      communities("communities.ts"):::phase
+      processes_ph("processes.ts"):::phase
+      runner("runner.ts"):::phase
+      wildcard_synthesis("wildcard-synthesis.ts"):::phase
+    end
+
+    pipeline -->|imports all phases| phases_index
+
+    subgraph CALLPROC["call-processor/ (27 files)"]
+      style CALLPROC fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      call_proc_barrel("call-processor.ts"):::entry
+      call_proc_types("types.ts"):::barrel
+      call_proc_constants("constants.ts"):::barrel
+      default_dispatch("default-dispatch.ts"):::callh
+      process_calls("process-calls.ts"):::callh
+      process_calls_extracted("process-calls-from-extracted.ts"):::callh
+    end
+
+    subgraph CALLHELPERS["call-processor/helpers/ (21 files)"]
+      style CALLHELPERS fill:#2E2E1E,stroke:#3A3A1E,color:#CDD6F4
+      access_emitter("access-emitter.ts"):::callh
+      assignments("assignments.ts"):::callh
+      callable_candidates("callable-candidates.ts"):::callh
+      constructor_verifier("constructor-verifier.ts"):::callh
+      enclosing_function("enclosing-function.ts"):::callh
+      exported_types("exported-types.ts"):::callh
+      fetch_calls("fetch-calls.ts"):::callh
+      interface_dispatch("interface-dispatch.ts"):::callh
+      member_call_by_file("member-call-by-file.ts"):::callh
+      mixed_chain("mixed-chain.ts"):::callh
+      module_aliased_call("module-aliased-call.ts"):::callh
+      overload_disambiguation("overload-disambiguation.ts"):::callh
+      provider_primary_resolver("provider-primary-resolver.ts"):::callh
+      receiver_resolution("receiver-resolution.ts"):::callh
+      resolve_call_target("resolve-call-target.ts"):::callh
+      resolve_free_call("resolve-free-call.ts"):::callh
+      resolve_member_call("resolve-member-call.ts"):::callh
+      resolve_static_call("resolve-static-call.ts"):::callh
+      routes_call("routes.ts"):::callh
+      seed_cross_file("seed-cross-file-receivers.ts"):::callh
+      single_candidate("single-candidate.ts"):::callh
+    end
+
+    call_proc_barrel --> call_proc_types
+    call_proc_barrel --> exported_types
+    call_proc_barrel --> seed_cross_file
+    call_proc_barrel --> process_calls
+    call_proc_barrel --> resolve_call_target
+    call_proc_barrel --> process_calls_extracted
+    call_proc_barrel --> assignments
+    call_proc_barrel --> routes_call
+    call_proc_barrel --> fetch_calls
+
+    subgraph SCOPE["scope-extractor/ (10 files)"]
+      style SCOPE fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      scope_barrel("scope-extractor.ts"):::barrel
+      scope_extract("scope-extractor/extract.ts"):::scopeh
+      scope_types("scope-extractor/types.ts"):::barrel
+    end
+
+    subgraph SCOPEHELP["scope-extractor/helpers/ (7 files)"]
+      style SCOPEHELP fill:#2E2E1E,stroke:#3A3A1E,color:#CDD6F4
+      capture_utils("capture-utils.ts"):::scopeh
+      declarations("declarations.ts"):::scopeh
+      imports_h("imports.ts"):::scopeh
+      partition("partition.ts"):::scopeh
+      references_h("references.ts"):::scopeh
+      scope_builder("scope-builder.ts"):::scopeh
+      type_bindings("type-bindings.ts"):::scopeh
+    end
+
+    subgraph TE["type-env/ (12 files)"]
+      style TE fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      type_env_barrel("type-env.ts"):::barrel
+      type_env_build("type-env/build.ts"):::te
+      type_env_types("type-env/types.ts"):::barrel
+      type_env_constants("type-env/constants.ts"):::barrel
+      seed_imports("seed-imports.ts"):::te
+    end
+
+    subgraph TEHELP["type-env/helpers/ (7 files)"]
+      style TEHELP fill:#2E2E1E,stroke:#3A3A1E,color:#CDD6F4
+      class_lookup("class-lookup.ts"):::te
+      field_resolution("field-resolution.ts"):::te
+      fixpoint("fixpoint.ts"):::te
+      inheritance("inheritance.ts"):::te
+      method_return("method-return.ts"):::te
+      scope_lookup("scope-lookup.ts"):::te
+      substitute_this("substitute-this.ts"):::te
+    end
+
+    subgraph LANG["languages/ (19 files + 3 subdirs: 60 files)"]
+      style LANG fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      lang_index("languages/index.ts"):::barrel
+      lang_provider("language-provider.ts"):::corefile
+      typescript_l("typescript/ (14 files)"):::langdir
+      python_l("python/ (13 files)"):::langdir
+      go_l("go/ (20 files)"):::langdir
+      csharp_l("csharp/ (15 files)"):::langdir
+      other_l("kotlin, java, php, ruby, rust, swift, dart, c-cpp"):::langdir
+    end
+
+    subgraph EXTRACTORS["Extractor Groups"]
+      style EXTRACTORS fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      method_extractors("method-extractors/"):::extdir
+      field_extractors("field-extractors/"):::extdir
+      variable_extractors("variable-extractors/"):::extdir
+      class_extractors("class-extractors/"):::extdir
+      heritage_extractors("heritage-extractors/"):::extdir
+      call_extractors("call-extractors/"):::extdir
+      import_resolvers("import-resolvers/"):::extdir
+    end
+
+    subgraph TYPEEX["type-extractors/ + shared/ + jvm/"]
+      style TYPEEX fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      te_shared("shared.ts"):::te
+      te_shared_dir("shared/ (9 files)"):::tedir
+      te_jvm_dir("jvm/ (java + kotlin)"):::tedir
+      te_perlang("typescript, python, go, rust, jvm, csharp, c-cpp, php, ruby, swift, dart"):::tedir
+    end
+
+    subgraph NAMED["named-bindings/ (8 files)"]
+      style NAMED fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      nb_perlang("typescript, python, java, kotlin, csharp, php, rust"):::tedir
+      nb_types("types.ts"):::barrel
+    end
+
+    subgraph ROUTEEX["route-extractors/ (5 files)"]
+      style ROUTEEX fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      nextjs_routes("nextjs.ts"):::callh
+      expo_routes("expo.ts"):::callh
+      php_routes("php.ts"):::callh
+      resp_shapes("response-shapes.ts"):::callh
+      mid_routes("middleware.ts"):::callh
+    end
+
+    subgraph PARSEPROC["parsing-processor/ + workers/ (12 files)"]
+      style PARSEPROC fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      parsing_proc_barrel("parsing-processor.ts"):::barrel
+      parsing_process("parsing-processor/process-parsing.ts"):::corefile
+      worker_pool("workers/worker-pool.ts"):::corefile
+      parse_worker_barrel("workers/parse-worker.ts"):::barrel
+    end
+
+    subgraph SR["scope-resolution/ (21 files)"]
+      style SR fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      sr_contract("contract/scope-resolver.ts"):::corefile
+      sr_graph_bridge("graph-bridge/ (6 files)"):::srdir
+      sr_passes("passes/ (6 files)"):::srdir
+      sr_pipeline("pipeline/ (5 files)"):::srdir
+      sr_scope("scope/ (2 files)"):::srdir
+      sr_index("workspace-index.ts"):::corefile
+    end
+
+    subgraph MODEL["model/ (11 files)"]
+      style MODEL fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      model_index("index.ts"):::barrel
+      model_dir("semantic-model, symbol-table, type-registry,\nfield-registry, method-registry, heritage-map, resolve, etc"):::srdir
+    end
+
+    subgraph TSQ["tree-sitter-queries/ (13 files)"]
+      style TSQ fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      tsq_index("index.ts"):::barrel
+      tsq_perlang("typescript, python, java, go, csharp, rust,\nphp, ruby, kotlin, swift, dart, c-family"):::tedir
+    end
+
+    subgraph UTILS["utils/ (9 files)"]
+      style UTILS fill:#2E2E1E,stroke:#4A4A2E,color:#CDD6F4
+      ast_helpers("ast-helpers.ts"):::callh
+      call_analysis("call-analysis.ts"):::callh
+      event_loop("event-loop.ts"):::callh
+      graph_sort("graph-sort.ts"):::callh
+      max_file_size("max-file-size.ts"):::callh
+      verbose("verbose.ts"):::callh
+      env("env.ts"):::callh
+    end
+
+    %% Top-level processors
+    structure_proc("structure-processor.ts"):::corefile
+    community_proc("community-processor.ts"):::corefile
+    process_proc("process-processor.ts"):::corefile
+    markdown_proc("markdown-processor.ts"):::corefile
+    heritage_proc("heritage-processor.ts"):::corefile
+    import_proc("import-processor.ts"):::corefile
+    mro_proc("mro-processor.ts"):::corefile
+    fs_walker("filesystem-walker.ts"):::corefile
+    binding_acc("binding-accumulator.ts"):::corefile
+    ast_cache("ast-cache.ts"):::corefile
+    vue_sfc("vue-sfc-extractor.ts"):::corefile
+    entry_point_scoring("entry-point-scoring.ts"):::corefile
+    export_detection("export-detection.ts"):::corefile
+    framework_detection("framework-detection.ts"):::corefile
+    call_routing("call-routing.ts"):::corefile
+    call_types("call-types.ts"):::barrel
+    scope_extractor_bridge("scope-extractor-bridge.ts"):::corefile
+    import_target_adapter("import-target-adapter.ts"):::corefile
+    cluster_enricher("cluster-enricher.ts"):::corefile
+    registry_primary("registry-primary-flag.ts"):::corefile
+    finalize_orch("finalize-orchestrator.ts"):::corefile
+    emit_references("emit-references.ts"):::corefile
+    resolve_references("resolve-references.ts"):::corefile
+  end
+
+  pipeline -.->|KnowledgeGraph| knowledge_graph_types_ig("core/graph/types.ts"):::core
+  pipeline -.->|PipelineResult| pipeline_result_type_ig("types/pipeline.ts"):::infra
+  import_proc -.->|generateId| generate_id_ig("lib/utils.ts"):::infra
+  heritage_proc -.->|generateId| generate_id_ig
+  structure_proc -.->|generateId| generate_id_ig
+  community_proc -.->|DEV_APP_ROOT_URL| generated_constants_ig("generated/constants.ts"):::infra
+  community_proc -.->|getPortability| portability_ig("core/portability/index.ts"):::core
+  fs_walker -.->|createIgnoreFilter| ignore_service_ig("config/ignore-service.ts"):::infra
+  cluster_enricher -.->|logger| logger_ig("core/logger.ts"):::core
+  process_proc -.->|logger| logger_ig
+  import_proc -.->|logger| logger_ig
+  heritage_proc -.->|logger| logger_ig
+  pipeline -.->|logger| logger_ig
+  mro_proc -.->|KnowledgeGraph| knowledge_graph_types_ig
+  process_proc -.->|KnowledgeGraph| knowledge_graph_types_ig
+  markdown_proc -.->|KnowledgeGraph| knowledge_graph_types_ig
+  import_proc -.->|KnowledgeGraph| knowledge_graph_types_ig
+  heritage_proc -.->|KnowledgeGraph| knowledge_graph_types_ig
+
+  classDef entry fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+  classDef barrel fill:#E8B84A,stroke:#F5A623,color:#FFFFFF,stroke-dasharray:5 5
+  classDef phase fill:#E8B84A,stroke:#F5A623,color:#FFFFFF
+  classDef corefile fill:#D4A017,stroke:#F5A623,color:#FFFFFF
+  classDef callh fill:#B8860B,stroke:#F5A623,color:#FFFFFF
+  classDef scopeh fill:#B8860B,stroke:#F5A623,color:#FFFFFF
+  classDef te fill:#B8860B,stroke:#F5A623,color:#FFFFFF
+  classDef langdir fill:#C8960E,stroke:#F5A623,color:#FFFFFF
+  classDef extdir fill:#B8860B,stroke:#F5A623,color:#FFFFFF
+  classDef tedir fill:#C8960E,stroke:#F5A623,color:#FFFFFF
+  classDef srdir fill:#C8960E,stroke:#F5A623,color:#FFFFFF
+  classDef core fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+  classDef infra fill:#95A5A6,stroke:#95A5A6,color:#FFFFFF

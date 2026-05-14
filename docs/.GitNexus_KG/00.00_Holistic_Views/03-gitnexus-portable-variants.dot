@@ -1,0 +1,158 @@
+digraph GitNexus_Portable_Variants {
+  rankdir=LR;
+  splines=ortho;
+  compound=true;
+  pad=0.5;
+  fontsize=12;
+  fontname="Segoe UI";
+
+  // ── Color palette ──────────────────────────────────────────────────────
+  // Shared layer:        lightblue
+  // Bun-specific:        lightcoral
+  // Node-specific:       lightgreen
+  // Exclusive feature:   gold
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SHARED LAYER — Identical code in both variants
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_shared {
+    label="Shared Code Layer (identical in both variants)";
+    style=filled;
+    fillcolor="#D6EAF8";
+    color="#2980B9";
+    fontcolor="#1A5276";
+
+    // CLI
+    SH_CLI [label="CLI Layer (cli/)\nAll commands\nCommander-based" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Parser
+    SH_Parser [label="core/tree-sitter/parser-loader.ts\nWASM parser loader" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Pipeline
+    SH_Pipeline [label="core/ingestion/\nFull ingestion pipeline\nLanguages, extractors, model\nscope-resolution" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Graph
+    SH_Graph [label="core/graph/\nKnowledgeGraph\nIn-memory graph" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Group
+    SH_Group [label="core/group/\nMulti-repo group\nContract Bridge" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Search
+    SH_Search [label="core/search/\nBM25, FTS, Hybrid" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Wiki
+    SH_Wiki [label="core/wiki/\nWiki generator" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Server
+    SH_Server [label="server/ + mcp/\nHTTP API + MCP stdio\nRoutes, middleware" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Storage
+    SH_Storage [label="storage/\nRepo manager, git ops" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Config
+    SH_Config [label="config/\nPortable config\nIgnore service" shape=box style=filled fillcolor="#AED6F1"];
+
+    // Version
+    SH_Version [label="types/ + lib/\nShared types and utils" shape=box style=filled fillcolor="#AED6F1"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // BUN PORTABLE BUILD (~154 MB, requires AVX)
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_bun {
+    label="Bun Portable Binary (~154 MB)";
+    style=filled;
+    fillcolor="#FDEDEC";
+    color="#C0392B";
+    fontcolor="#641E16";
+
+    label="Bun Portable Binary (~154 MB)\nRequires AVX CPU";
+
+    BUN_Binary [label="gitnexus.exe\nbun build --compile\nSingle-file executable" shape=box style=filled fillcolor="#F1948A" penwidth=2];
+
+    BUN_Entry [label="portable-bootstrap.ts\nEntry: NODE_PATH setup\n→ import('./cli/index.js')" shape=box style=filled fillcolor="#F1948A"];
+
+    BUN_WASM [label="Bundled WASM Grammars\n(13 tree-sitter grammars\nembedded in binary)" shape=folder style=filled fillcolor="#F9E79F" color="#D4AC0D"];
+
+    BUN_Models [label="Bundled ONNX Models\n(e5-small embedding model\n~23 MB compressed)" shape=folder style=filled fillcolor="#F9E79F" color="#D4AC0D"];
+
+    BUN_ONNX [label="WASM ONNX Runtime\n(~4 MB wasm build)\nNo native .node addons" shape=folder style=filled fillcolor="#F9E79F" color="#D4AC0D"];
+
+    BUN_Sidecar [label="ladybug-wrapper.mjs\nNative sidecar binary\nGraph DB operations" shape=folder style=filled fillcolor="#F9E79F" color="#D4AC0D"];
+
+    BUN_WebUI [label="Web UI static assets\n(React/Vite build)\nServed via /ui" shape=folder style=filled fillcolor="#F9E79F" color="#D4AC0D"];
+
+    // Portable-specific components
+    BUN_Portable [label="PortableContract\nisPortable = true\nhasNativeAddons = false\nhasWorkerPool = false\nhasLeidenAlgorithm = false\nhasVectorExtension = true\nhasHttpEmbeddings = true\nhasOnnxRuntimeNode = false" shape=box style=filled fillcolor="#F1948A" penwidth=2];
+
+    BUN_WasmProvider [label="WasmPortableProvider\n(conceptual)\nWASM-based ONNX inference\nHTTP fallback for embeddings" shape=box style=filled fillcolor="#E6B0AA"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // NODE.JS PACKAGE (~80 MB, no AVX required)
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_node {
+    label="Node.js Package (npm) ~80 MB";
+    style=filled;
+    fillcolor="#E8F8F5";
+    color="#1ABC9C";
+    fontcolor="#0E6655";
+
+    NODE_Pkg [label="npm install -g gitnexus\nNode.js package" shape=box style=filled fillcolor="#76D7C4" penwidth=2];
+
+    NODE_Entry [label="cli/index.ts\nDirect Node.js entry" shape=box style=filled fillcolor="#76D7C4"];
+
+    NODE_Native [label="Native .node Addons\ntree-sitter native bindings\n(per-language .node files)" shape=folder style=filled fillcolor="#ABEBC6" color="#27AE60"];
+
+    NODE_ONNX [label="onnxruntime-node\nNative ONNX Runtime\nGPU acceleration (cuda)" shape=folder style=filled fillcolor="#ABEBC6" color="#27AE60"];
+
+    NODE_Worker [label="Worker Thread Pool\nchild_process workers\nfor parallel parsing" shape=folder style=filled fillcolor="#ABEBC6" color="#27AE60"];
+
+    NODE_Leiden [label="Native Leiden Algorithm\nCommunity detection\nC++ addon" shape=folder style=filled fillcolor="#ABEBC6" color="#27AE60"];
+
+    NODE_Sidecar [label="ladybug-wrapper (optional)\nSidecar not bundled\nUser installs separately" shape=folder style=filled fillcolor="#D5F5E3" color="#1ABC9C"];
+
+    // Node-specific components
+    NODE_DevContract [label="DevContract\nisPortable = false\nhasNativeAddons = true\nhasWorkerPool = true\nhasLeidenAlgorithm = true\nhasVectorExtension = true\nhasHttpEmbeddings = true\nhasOnnxRuntimeNode = true" shape=box style=filled fillcolor="#76D7C4" penwidth=2];
+
+    NODE_NativeProvider [label="NativeNodeProvider\n(conceptual)\nNative ONNX Runtime\nnode addons for parsing" shape=box style=filled fillcolor="#A3E4D7"];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // EDGES — shared components
+  // ═══════════════════════════════════════════════════════════════════════
+  BUN_Binary -> BUN_Entry [label="executable entry" fontsize=9];
+  BUN_Entry -> SH_CLI [label="lazy import" fontsize=9];
+  SH_CLI -> SH_Pipeline [label="orchestrates" fontsize=9];
+  SH_CLI -> SH_Parser [label="WASM parsing" fontsize=9];
+  SH_Pipeline -> SH_Graph [label="populates" fontsize=9];
+  SH_Pipeline -> SH_Group [label="group detection" fontsize=9];
+  SH_Graph -> SH_Search [label="indexed search" fontsize=9];
+  SH_Graph -> SH_Wiki [label="wiki from graph" fontsize=9];
+  SH_Graph -> SH_Server [label="serves via API" fontsize=9];
+  SH_Server -> SH_Storage [label="reads registry" fontsize=9];
+  SH_Config -> SH_Server [label="config provider" fontsize=9];
+
+  // Bun exclusive edges
+  BUN_WASM -> SH_Parser [label="embedded .wasm\nfiles (no native)" fontsize=9 color="#C0392B"];
+  BUN_ONNX -> BUN_WasmProvider [label="WASM ONNX\ninference" fontsize=9 color="#C0392B"];
+  BUN_Sidecar -> SH_Server [label="native sidecar\nfor graph DB" fontsize=9 color="#C0392B"];
+  BUN_WasmProvider -> BUN_Portable [label="PortableContract\ncontrols mode" fontsize=9 color="#C0392B"];
+  BUN_Portable -> SH_Pipeline [label="IS_PORTABLE_BUILD=true\ndisables workers" fontsize=9 color="#C0392B"];
+
+  // Node exclusive edges
+  NODE_Native -> SH_Parser [label="native .node bindings\n(not WASM)" fontsize=9 color="#1ABC9C"];
+  NODE_ONNX -> NODE_NativeProvider [label="native ONNX\nGPU capable" fontsize=9 color="#1ABC9C"];
+  NODE_Worker -> SH_Pipeline [label="worker pool for\nparallel parsing" fontsize=9 color="#1ABC9C"];
+  NODE_Leiden -> SH_Pipeline [label="native Leiden\ncommunity detection" fontsize=9 color="#1ABC9C"];
+  NODE_NativeProvider -> NODE_DevContract [label="DevContract\ncontrols mode" fontsize=9 color="#1ABC9C"];
+  NODE_DevContract -> SH_Pipeline [label="IS_PORTABLE_BUILD=false\nenables workers" fontsize=9 color="#1ABC9C"];
+  NODE_Sidecar -> SH_Server [label="optional sidecar" fontsize=9 color="#1ABC9C"];
+
+  // Exclusive annotations
+  BUN_WASM [label="Bundled WASM Grammars\n(javascript, typescript, python,\njava, cpp, go, rust, php,\nruby, c-sharp, swift, kotlin,\nproto, dart, tsx)" shape=folder style=filled fillcolor="#F9E79F"];
+  BUN_Models [label="Bundled ONNX Models\n(multilingual-e5-small\n~23 MB compressed)" shape=folder style=filled fillcolor="#F9E79F"];
+
+  // Annotations
+  note_shared [label="Shared code = all src/ except\nportable-bootstrap.ts and\nthe runtime variant dispatch" shape=note style=filled fillcolor="#F2F3F4" fontsize=10];
+}

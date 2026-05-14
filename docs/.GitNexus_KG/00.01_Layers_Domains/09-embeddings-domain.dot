@@ -1,0 +1,123 @@
+digraph Embeddings_Domain {
+  rankdir=TB;
+  label="GitNexus Embeddings Domain — core/embeddings/";
+  fontsize=16;
+  fontname="Consolas";
+  compound=true;
+  bgcolor="#1E1E2E";
+  fontcolor="#CDD6F4";
+  edge [fontname="Consolas", fontsize=9];
+  node [fontname="Consolas", fontsize=10, style="filled", shape="box"];
+
+  subgraph cluster_embeddings {
+    label="Embeddings Domain (core/embeddings/)";
+    fontsize=14;
+    fontcolor="#F5A623";
+    style="filled";
+    color="#F5A623";
+    fillcolor="#2E2E1E";
+
+    // Barrel
+    index_emb [label="index.ts (barrel)", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+
+    // Config/Types
+    config_emb [label="config.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    types_emb [label="types.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+
+    // Providers
+    provider [label="provider.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    hf_env [label="hf-env.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    http_client [label="http-client.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    server_mapping [label="server-mapping.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+
+    // Core embedding engine
+    embedder [label="embedder.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    embedding_pipeline [label="embedding-pipeline.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    text_generator [label="text-generator.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    chunker [label="chunker.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    character_chunk [label="character-chunk.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+    structural_extractor [label="structural-extractor.ts", fillcolor="#D4A017", fontcolor="#FFFFFF"];
+
+    // Utilities
+    ast_utils [label="ast-utils.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    line_index [label="line-index.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    cache_loader [label="cache-loader.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    diagnostic [label="diagnostic.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+    exact_search [label="exact-search.ts", fillcolor="#C8960E", fontcolor="#FFFFFF"];
+
+    // Internal edges
+    index_emb -> types_emb [label="*", color="#F5A623"];
+    index_emb -> http_client [label="*", color="#F5A623"];
+    index_emb -> embedder [label="*", color="#F5A623"];
+    index_emb -> text_generator [label="*", color="#F5A623"];
+    index_emb -> embedding_pipeline [label="*", color="#F5A623"];
+
+    config_emb -> types_emb [label="DEFAULT_EMBEDDING_CONFIG", color="#F5A623"];
+    config_emb -> loadPortableConfig [label="loadPortableConfig", color="#F5A623"];
+    config_emb -> runtime_capabilities [label="defaultEmbeddingThreads", color="#F5A623"];
+
+    embedder -> config_emb [label="resolveEmbeddingConfig", color="#F5A623"];
+    embedder -> http_client [label="isHttpMode, getHttpDimensions", color="#F5A623"];
+    embedder -> hf_env [label="applyHfEnvOverrides, isHfDownloadFailure", color="#F5A623"];
+    embedder -> provider [label="selectProvider", color="#F5A623"];
+    embedder -> types_emb [label="DEFAULT_EMBEDDING_CONFIG", color="#F5A623"];
+
+    embedding_pipeline -> embedder [label="generateEmbeddings", color="#F5A623"];
+    embedding_pipeline -> text_generator [label="generateEmbeddingText", color="#F5A623"];
+    embedding_pipeline -> chunker [label="chunkNode, characterChunk", color="#F5A623"];
+    embedding_pipeline -> structural_extractor [label="extractStructuralNames", color="#F5A623"];
+    embedding_pipeline -> config_emb [label="resolveEmbeddingConfig", color="#F5A623"];
+    embedding_pipeline -> exact_search [label="rankExactEmbeddingRows", color="#F5A623"];
+    embedding_pipeline -> types_emb [label="(types)", color="#F5A623"];
+
+    chunker -> character_chunk [label="characterChunk", color="#F5A623"];
+    chunker -> ast_utils [label="ensureAndParse, findDeclarationNode", color="#F5A623"];
+    chunker -> line_index [label="buildLineIndex, resolveChunkLines", color="#F5A623"];
+    chunker -> types_emb [label="(types)", color="#F5A623"];
+
+    character_chunk -> line_index [label="buildLineIndex, resolveChunkLines", color="#F5A623"];
+
+    text_generator -> types_emb [label="EmbeddableNode, EmbeddingConfig", color="#F5A623"];
+
+    structural_extractor -> ast_utils [label="ensureAndParse, findDeclarationNode", color="#F5A623"];
+    structural_extractor -> language_provider [label="getProviderForFile", color="#F5A623"];
+    structural_extractor -> method_types [label="MethodExtractorContext, ExtractedMethods", color="#F5A623"];
+    structural_extractor -> field_types [label="FieldExtractorContext, ExtractedFields", color="#F5A623"];
+    structural_extractor -> type_env [label="buildTypeEnv", color="#F5A623"];
+
+    cache_loader -> types_emb [label="CachedEmbedding", color="#F5A623"];
+    cache_loader -> lbug_adapter_emb [label="loadCachedEmbeddings", color="#F5A623"];
+    cache_loader -> embedding_pipeline [label="batchInsertEmbeddings", color="#F5A623"];
+
+    provider -> types_emb [label="DEFAULT_EMBEDDING_CONFIG", color="#F5A623"];
+
+    ast_utils -> parser_loader [label="parser-loader symbols", color="#F5A623"];
+  }
+
+  // External deps
+  config_emb -> portable_config [label="loadPortableConfig, resolveConfigPath", color="#95A5A6", style="dashed"];
+  embedder -> generated_constants_emb [label="DEV_APP_ROOT_URL", color="#95A5A6", style="dashed"];
+  embedder -> portability_emb [label="getPortability", color="#F5A623", style="dashed"];
+  embedder -> logger_emb [label="logger", color="#F5A623", style="dashed"];
+  provider -> portability_emb [label="getPortability", color="#F5A623", style="dashed"];
+  provider -> portable_config [label="loadPortableConfig", color="#95A5A6", style="dashed"];
+  embedding_pipeline -> platform_capabilities [label="getExactScanLimit", color="#F5A623", style="dashed"];
+  embedding_pipeline -> embedding_repository [label="EmbeddingRepository", color="#F5A623", style="dashed"];
+  embedding_pipeline -> vector_store_registry [label="createEmbeddingRepository", color="#F5A623", style="dashed"];
+  embedding_pipeline -> logger_emb [label="logger", color="#F5A623", style="dashed"];
+
+  language_provider [label="core/ingestion/language-provider.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  method_types [label="core/ingestion/method-types.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  field_types [label="core/ingestion/field-types.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  type_env [label="core/ingestion/type-env.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  portable_config [label="config/portable-config.ts", color="#95A5A6", fontcolor="#FFFFFF"];
+  lbug_adapter_emb [label="core/lbug/lbug-adapter.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  parser_loader [label="core/tree-sitter/parser-loader.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  generated_constants_emb [label="generated/constants.ts", color="#95A5A6", fontcolor="#FFFFFF"];
+  portability_emb [label="core/portability/index.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  logger_emb [label="core/logger.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  platform_capabilities [label="core/platform/capabilities.ts", color="#F5A623", fontcolor="#FFFFFF"];
+  embedding_repository [label="core/lbug/repository/embedding-repository.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  vector_store_registry [label="core/vector-store/registry.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  runtime_capabilities [label="core/platform/capabilities.ts", color="#F5A623", fontcolor="#FFFFFF"];
+}

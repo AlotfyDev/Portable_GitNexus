@@ -1,0 +1,239 @@
+digraph GitNexus_Data_Flow {
+  rankdir=LR;
+  splines=ortho;
+  compound=true;
+  pad=0.5;
+  fontsize=12;
+  fontname="Segoe UI";
+  label="GitNexus Data Flow: User Input → CLI → Pipeline → Storage → Query";
+  labelloc=t;
+  labeljust=l;
+  fontsize=16;
+
+  // ── Color palette ──────────────────────────────────────────────────────
+  // lightblue  = input/entry
+  // lightgreen = pipeline phases
+  // lightyellow = graph/model
+  // lightpink  = persistence
+  // lightpurple = output/query
+
+  node [shape=box style=filled];
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // FLOW 1: ANALYSIS / INDEXING (write path)
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_flow1 {
+    label="Flow 1: Indexing (write path)";
+    style=filled;
+    fillcolor="#EBF5FB";
+    color="#2980B9";
+    fontsize=14;
+
+    N1_UserInput [label="User Input\nnpx gitnexus analyze [path]\n--embeddings / --force / --skills" shape=box style=filled fillcolor="#AED6F1" penwidth=2];
+
+    N2_CLIEntry [label="cli/index.ts\nCommander CLI routing" shape=box style=filled fillcolor="#AED6F1"];
+
+    N3_AnalyzeCmd [label="cli/analyze.ts\nHeap check → SIGINT handler\nProgress bar setup" shape=box style=filled fillcolor="#85C1E9"];
+
+    N4_RunAnalysis [label="core/run-analyze.ts\nShared orchestrator\nEarly-exit check\nEmbedding mode derivation" shape=box style=filled fillcolor="#85C1E9" penwidth=2];
+
+    // Pipeline sub-flow
+    subgraph cluster_pipeline {
+      label="Pipeline (core/ingestion/)";
+      style=filled;
+      fillcolor="#D5F5E3";
+      color="#27AE60";
+
+      N5_Scan [label="Phase: scan\nfilesystem-walker.ts\nDiscovers files, applies .gitignore" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N6_Structure [label="Phase: structure\nstructure-processor.ts\nFile-node scaffolding" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N7_Markdown [label="Phase: markdown\nmarkdown-processor.ts" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N8_Cobol [label="Phase: cobol\ncobol-processor.ts\nCOBOL/JCL extraction" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N9_Parse [label="Phase: parse\nworkers/parse-worker.ts\nLanguage providers\nCall/class/method/field extraction\nScope extraction\nType environment" shape=box style=filled fillcolor="#A9DFBF" penwidth=2];
+
+      N10_Routes [label="Phase: routes\nroute-extractors/" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N11_Tools [label="Phase: tools\ncall-processor.ts" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N12_ORM [label="Phase: orm\norm-extraction.ts" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N13_CrossFile [label="Phase: crossFile\nimport-processor.ts\nscope-resolution/graph-bridge/" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N14_ScopeRes [label="Phase: scopeResolution\nscope-resolution/pipeline/\ntype-env/ scope-extractor/" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N15_MRO [label="Phase: mro\nmro-processor.ts" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N16_Communities [label="Phase: communities\ncommunity-processor.ts\ncluster enrichment" shape=box style=filled fillcolor="#A9DFBF"];
+
+      N17_Processes [label="Phase: processes\nprocess-processor.ts\nexecution flows" shape=box style=filled fillcolor="#A9DFBF"];
+    }
+
+    N18_Graph [label="core/graph/graph.ts\nKnowledgeGraph\nin-memory: nodes + edges" shape=box style=filled fillcolor="#F5CBA7" penwidth=2];
+
+    N19_LBugLoad [label="core/lbug/lbug-adapter.ts\nloadGraphToLbug()\nGraph → LadybugDB rows" shape=box style=filled fillcolor="#D2B4DE"];
+
+    N20_FTS [label="core/search/fts-indexes.ts\ncreateSearchFTSIndexes()\nFull-text search index" shape=box style=filled fillcolor="#D2B4DE"];
+
+    N21_Embeddings [label="core/embeddings/embedding-pipeline.ts\nLoad model → chunk nodes\n→ embed chunks → store\n[WASM or HTTP provider]" shape=box style=filled fillcolor="#A9DFBF"];
+
+    N22_Finalize [label="core/analyze/finalizer.ts\nbuildMeta() → save meta.json\nregisterRepo() → registry\nAGENTS.md / CLAUDE.md AI context" shape=box style=filled fillcolor="#F5CBA7"];
+
+    N23_LBugDB [label=".gitnexus/{name}/lbug.lb\nLadybugDB database file\n(embedded graph database)" shape=folder style=filled fillcolor="#D2B4DE" penwidth=2];
+
+    N24_Meta [label=".gitnexus/{name}/meta.json\nIndex metadata\nStats, commit hash" shape=note style=filled fillcolor="#D2B4DE"];
+
+    N25_Registry [label="~/.gitnexus/registry.json\nGlobal repo registry\nName → path mappings" shape=note style=filled fillcolor="#D2B4DE"];
+
+    // Edges for Flow 1
+    N1_UserInput -> N2_CLIEntry [label="CLI invocation" fontsize=9];
+    N2_CLIEntry -> N3_AnalyzeCmd [label="lazy action" fontsize=9];
+    N3_AnalyzeCmd -> N4_RunAnalysis [label="runFullAnalysis()" fontsize=9];
+    N4_RunAnalysis -> N5_Scan [label="runPipelineFromRepo()" fontsize=9];
+
+    N5_Scan -> N6_Structure [label="file list" fontsize=8];
+    N6_Structure -> N7_Markdown [label="file nodes" fontsize=8];
+    N6_Structure -> N8_Cobol [label="file nodes" fontsize=8];
+    N6_Structure -> N9_Parse [label="file nodes" fontsize=8];
+    N9_Parse -> N10_Routes [label="calls" fontsize=8];
+    N9_Parse -> N11_Tools [label="calls" fontsize=8];
+    N9_Parse -> N12_ORM [label="ORMs" fontsize=8];
+    N10_Routes -> N13_CrossFile [label="route info" fontsize=8];
+    N11_Tools -> N13_CrossFile [label="call info" fontsize=8];
+    N12_ORM -> N13_CrossFile [label="ORM info" fontsize=8];
+    N13_CrossFile -> N14_ScopeRes [label="refs" fontsize=8];
+    N14_ScopeRes -> N15_MRO [label="model" fontsize=8];
+    N15_MRO -> N16_Communities [label="edges" fontsize=8];
+    N16_Communities -> N17_Processes [label="clusters" fontsize=8];
+
+    N9_Parse -> N18_Graph [label="populates nodes/edges" fontsize=9];
+    N10_Routes -> N18_Graph [label="route edges" fontsize=8 style=dashed];
+    N14_ScopeRes -> N18_Graph [label="cross-ref edges" fontsize=8 style=dashed];
+    N16_Communities -> N18_Graph [label="community metadata" fontsize=8 style=dashed];
+    N17_Processes -> N18_Graph [label="process metadata" fontsize=8 style=dashed];
+
+    N4_RunAnalysis -> N19_LBugLoad [label="loadGraphToLbug()" fontsize=9];
+    N18_Graph -> N19_LBugLoad [label="graph data" fontsize=9];
+    N19_LBugLoad -> N20_FTS [label="after load" fontsize=9];
+    N20_FTS -> N21_Embeddings [label="after FTS" fontsize=9];
+    N21_Embeddings -> N22_Finalize [label="after embeddings" fontsize=9];
+
+    N19_LBugLoad -> N23_LBugDB [label="writes" fontsize=9];
+    N20_FTS -> N23_LBugDB [label="FTS indexes" fontsize=9];
+    N21_Embeddings -> N23_LBugDB [label="vector indexes" fontsize=9];
+    N22_Finalize -> N24_Meta [label="writes" fontsize=9];
+    N22_Finalize -> N25_Registry [label="writes" fontsize=9];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // FLOW 2: QUERY / READ PATH
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_flow2 {
+    label="Flow 2: Query (read path)";
+    style=filled;
+    fillcolor="#FDEDEC";
+    color="#C0392B";
+    fontsize=14;
+
+    Q_QueryInput [label="Query Input\nquery / context / impact\n[MCP or HTTP or CLI]" shape=box style=filled fillcolor="#F1948A" penwidth=2];
+
+    Q_MCP [label="mcp/server.ts\nMCP protocol handler\ntool dispatch" shape=box style=filled fillcolor="#F1948A"];
+
+    Q_MCP_Local [label="mcp/local/local-backend.ts\nLocalBackend.callTool()\nDispatches to helpers" shape=box style=filled fillcolor="#F1948A"];
+
+    Q_HTTP [label="server/routes/\nquery.ts / search.ts\ngraph.ts / processes.ts" shape=box style=filled fillcolor="#F1948A"];
+
+    Q_LBugQuery [label="core/lbug/lbug-adapter.ts\nexecuteQuery() / streamQuery()\nCypher over LadybugDB" shape=box style=filled fillcolor="#D2B4DE"];
+
+    Q_FTS [label="core/search/bm25-index.ts\nsearchFTSFromLbug()\nFull-text BM25 ranking" shape=box style=filled fillcolor="#D2B4DE"];
+
+    Q_Hybrid [label="core/search/hybrid-search.ts\nhybridSearch()\nCombine vector + BM25" shape=box style=filled fillcolor="#D2B4DE"];
+
+    Q_Embeddings [label="core/embeddings/exact-search.ts\nExact scan fallback\ncollectBestChunks()" shape=box style=filled fillcolor="#D2B4DE"];
+
+    Q_Impact [label="mcp/local/helpers/impact.ts\nBlast radius analysis\nTraces LadybugDB graph" shape=box style=filled fillcolor="#F1948A"];
+
+    Q_Context [label="mcp/local/helpers/context-tools.ts\n360-degree symbol view" shape=box style=filled fillcolor="#F1948A"];
+
+    Q_Group [label="mcp/local/helpers/group.ts\nMulti-repo group queries\nContract Bridge queries" shape=box style=filled fillcolor="#F1948A"];
+
+    Q_Rename [label="mcp/local/helpers/rename.ts\nSafe symbol rename" shape=box style=filled fillcolor="#F1948A"];
+
+    Q_Diff [label="mcp/local/helpers/detect-changes.ts\nGit diff → symbol impact" shape=box style=filled fillcolor="#F1948A"];
+
+    Q_Result [label="Query Result\nJSON response\nRanked execution flows\nBlast radius report" shape=box style=filled fillcolor="#F5CBA7" penwidth=2];
+
+    // Edges for Flow 2
+    Q_QueryInput -> Q_MCP [label="MCP stdio" fontsize=9];
+    Q_QueryInput -> Q_HTTP [label="HTTP /api/*" fontsize=9];
+
+    Q_MCP -> Q_MCP_Local [label="callTool()" fontsize=9];
+    Q_MCP_Local -> Q_LBugQuery [label="executeQuery()" fontsize=9];
+    Q_MCP_Local -> Q_FTS [label="searchFTSFromLbug()" fontsize=9];
+    Q_MCP_Local -> Q_Hybrid [label="hybridSearch()" fontsize=9];
+    Q_MCP_Local -> Q_Impact [label="impact analysis" fontsize=9];
+    Q_MCP_Local -> Q_Context [label="symbol context" fontsize=9];
+    Q_MCP_Local -> Q_Group [label="group queries" fontsize=9];
+    Q_MCP_Local -> Q_Rename [label="rename" fontsize=9];
+    Q_MCP_Local -> Q_Diff [label="detect changes" fontsize=9];
+
+    Q_HTTP -> Q_LBugQuery [label="executeQuery()" fontsize=9];
+    Q_HTTP -> Q_Hybrid [label="hybridSearch()" fontsize=9];
+    Q_HTTP -> Q_FTS [label="searchFTSFromLbug()" fontsize=9];
+
+    Q_LBugQuery -> N23_LBugDB [label="reads" fontsize=9];
+    Q_FTS -> N23_LBugDB [label="FTS reads" fontsize=9];
+    Q_Hybrid -> N23_LBugDB [label="vector + BM25 reads" fontsize=9];
+    Q_Embeddings -> N23_LBugDB [label="exact scan" fontsize=9];
+
+    Q_MCP_Local -> Q_Result [label="returns result" fontsize=9];
+    Q_Impact -> Q_Result [label="impact report" fontsize=9];
+    Q_Context -> Q_Result [label="symbol context" fontsize=9];
+    Q_Group -> Q_Result [label="group data" fontsize=9];
+    Q_Rename -> Q_Result [label="rename result" fontsize=9];
+    Q_Diff -> Q_Result [label="diff analysis" fontsize=9];
+    Q_HTTP -> Q_Result [label="HTTP response" fontsize=9];
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // FLOW 3: SERVE / WIKI
+  // ═══════════════════════════════════════════════════════════════════════
+  subgraph cluster_flow3 {
+    label="Flow 3: Server / Wiki (auxiliary paths)";
+    style=filled;
+    fillcolor="#FDEBD0";
+    color="#E67E22";
+    fontsize=14;
+
+    W_User [label="User\nbrowser / curl" shape=box style=filled fillcolor="#F5CBA7"];
+
+    W_Serve [label="cli/serve.ts\ngitnexus serve --port 4747" shape=box style=filled fillcolor="#F5CBA7"];
+
+    W_API [label="server/api.ts\nExpress server\nMiddleware → Routes" shape=box style=filled fillcolor="#F5CBA7"];
+
+    W_WebUI [label="server/web-ui.ts\nStatic file serve\nReact/Vite app" shape=box style=filled fillcolor="#F5CBA7"];
+
+    W_MCP_HTTP [label="server/mcp-http.ts\nMCP tools over HTTP POST" shape=box style=filled fillcolor="#F5CBA7"];
+
+    W_WikiCLI [label="cli/wiki.ts\ngitnexus wiki [path]" shape=box style=filled fillcolor="#F5CBA7"];
+
+    W_WikiGen [label="core/wiki/generator.ts\nLLM client → prompts\n→ generate pages → HTML" shape=box style=filled fillcolor="#F5CBA7"];
+
+    W_LBug [label="core/lbug/lbug-adapter.ts\nGraph queries for wiki" shape=box style=filled fillcolor="#D2B4DE"];
+
+    W_HTML [label="wiki output\nHTML viewer\n(or GitHub Gist)" shape=box style=filled fillcolor="#F5CBA7"];
+
+    W_User -> W_Serve [label="gitnexus serve" fontsize=9];
+    W_User -> W_API [label="HTTP :4747" fontsize=9];
+    W_User -> W_WikiCLI [label="gitnexus wiki" fontsize=9];
+    W_Serve -> W_API [label="createServer()" fontsize=9];
+    W_API -> W_WebUI [label="registerWebUI()" fontsize=9];
+    W_API -> W_MCP_HTTP [label="mountMCPEndpoints()" fontsize=9];
+    W_MCP_HTTP -> Q_MCP_Local [label="calls LocalBackend" fontsize=9 style=dashed];
+    W_WikiCLI -> W_WikiGen [label="generateWiki()" fontsize=9];
+    W_WikiGen -> W_LBug [label="graph queries" fontsize=9];
+    W_WikiGen -> W_HTML [label="renders" fontsize=9];
+  }
+}

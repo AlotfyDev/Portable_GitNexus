@@ -1,0 +1,134 @@
+%% GitNexus Holistic Architecture — Layer Diagram
+%% Colors: blue=CLI, green=Server/MCP, orange=Core, purple=Storage, gray=Infra
+
+graph TB
+  classDef cli fill:#AED6F1,stroke:#2980B9,color:#1A5276
+  classDef server fill:#A9DFBF,stroke:#27AE60,color:#1E8449
+  classDef mcp fill:#A9DFBF,stroke:#27AE60,color:#1E8449
+  classDef core fill:#F5CBA7,stroke:#E67E22,color:#CA6F1E
+  classDef storage fill:#D2B4DE,stroke:#8E44AD,color:#6C3483
+  classDef infra fill:#D5D8DC,stroke:#7F8C8D,color:#515A5A
+  classDef ext fill:#F8F9FA,stroke:#ADB5BD,color:#495057
+
+  subgraph External["External / User"]
+    direction LR
+    User(("User / AI Agent")):::ext
+    WebUI["Web UI (React/Vite)"]:::ext
+    Editor["Editor (Cursor, Claude)"]:::ext
+  end
+
+  subgraph CLI_Layer["CLI Layer (cli/)"]
+    CLI_Main["cli/index.ts — Commander"]:::cli
+    CLI_Analyze["cli/analyze.ts — analyze --embeddings"]:::cli
+    CLI_Serve["cli/serve.ts — serve --port 4747"]:::cli
+    CLI_MCP["cli/mcp.ts — MCP stdio server"]:::cli
+    CLI_Tool["cli/tool.ts — query/context/impact"]:::cli
+    CLI_Wiki["cli/wiki.ts — wiki generation"]:::cli
+    CLI_Group["cli/group.ts — group commands"]:::cli
+  end
+
+  subgraph Server_Layer["Server Layer (server/)"]
+    SVR_API["server/api.ts — Express app"]:::server
+    SVR_Routes["server/routes/ — analyze, embedding, file, graph, health, processes, query, repos, search"]:::server
+    SVR_Middleware["server/middleware/ — cors, error-handler, repo-resolver"]:::server
+    SVR_JobMgr["server/analyze-job.ts — JobManager"]:::server
+    SVR_Worker["server/analyze-worker.ts"]:::server
+    SVR_Stream["server/streaming.ts — SSE + progress"]:::server
+    SVR_MCP_HTTP["server/mcp-http.ts — MCP over HTTP"]:::server
+    SVR_WebUI["server/web-ui.ts — static file serve"]:::server
+  end
+
+  subgraph MCP_Layer["MCP Protocol Layer (mcp/)"]
+    MCP_Server["mcp/server.ts — MCP Server (stdio)"]:::mcp
+    MCP_Tools["mcp/tools.ts — tool definitions"]:::mcp
+    MCP_Resources["mcp/resources.ts — resource definitions"]:::mcp
+    MCP_Local["mcp/local/local-backend.ts — LocalBackend"]:::mcp
+    MCP_LocalHelpers["mcp/local/helpers/ — tool-dispatch, impact, rename, search, context-tools, graph-queries, ..."]:::mcp
+  end
+
+  subgraph Core["Core Business Logic (core/)"]
+    Core_RunAnalyze["core/run-analyze.ts — Analyze Orchestrator"]:::core
+    Core_Ingestion["core/ingestion/ — Pipeline: scan → structure → parse → ... → processes"]:::core
+    Core_Embeddings["core/embeddings/ — Chunker, Embedder, Provider, HTTP/WASM backends"]:::core
+    Core_Graph["core/graph/ — KnowledgeGraph in-memory"]:::core
+    Core_Group["core/group/ — Multi-repo group, Contract Bridge, Service Boundaries"]:::core
+    Core_LBug["core/lbug/ — LadybugDB adapter, schema, FTS, Vector, CSV"]:::core
+    Core_Search["core/search/ — BM25, FTS, Hybrid search"]:::core
+    Core_Port["core/portability/ — PortableContract / DevContract"]:::core
+    Core_TreeSitter["core/tree-sitter/ — WASM parser loader, 13 grammar bundles"]:::core
+    Core_VecStore["core/vector-store/ — ICM provider, Ladybug provider"]:::core
+    Core_Wiki["core/wiki/ — LLM client, Generator, HTML viewer"]:::core
+    Core_Sidecar["core/sidecar/ — Ladybug native sidecar manager"]:::core
+    Core_Platform["core/platform/ — AVX, FMA, thread detection"]:::core
+    Core_Analyze["core/analyze/ — Finalizer, Phases, Types"]:::core
+  end
+
+  subgraph Storage["Storage Layer (storage/)"]
+    STOR_RepoMgr["storage/repo-manager.ts — Registration, Paths, Meta"]:::storage
+    STOR_Git["storage/git.ts — Git operations"]:::storage
+  end
+
+  subgraph Infra["Infrastructure (config/, lib/, types/, generated/)"]
+    INFRA_Config["config/ — portable-config, ignore-service, supported-languages"]:::infra
+    INFRA_Lib["lib/utils.ts"]:::infra
+    INFRA_Types["types/pipeline.ts"]:::infra
+    INFRA_Generated["generated/constants.ts — IS_PORTABLE_BUILD, VERSION"]:::infra
+    PORT_Boot["portable-bootstrap.ts — Bun entry"]:::infra
+  end
+
+  %% ── Edges ──
+  User --> CLI_Main
+  User --> SVR_API
+  Editor --> MCP_Server
+  WebUI --> SVR_API
+
+  CLI_Main --> CLI_Analyze
+  CLI_Main --> CLI_Serve
+  CLI_Main --> CLI_MCP
+  CLI_Main --> CLI_Tool
+  CLI_Analyze --> Core_RunAnalyze
+  CLI_Analyze --> STOR_RepoMgr
+  CLI_Analyze --> STOR_Git
+  CLI_Serve --> SVR_API
+  CLI_MCP --> MCP_Server
+  CLI_Wiki --> Core_Wiki
+  CLI_Tool --> MCP_Local
+
+  SVR_API --> SVR_Routes
+  SVR_API --> SVR_Middleware
+  SVR_API --> MCP_Local
+  SVR_API --> MCP_Server
+  SVR_Routes --> Core_RunAnalyze
+  SVR_Routes --> Core_LBug
+  SVR_Routes --> Core_Search
+  SVR_Routes --> Core_Env["core/environment.ts"]:::core
+  SVR_Routes --> Core_Port
+  SVR_Routes --> STOR_RepoMgr
+  SVR_Worker --> Core_RunAnalyze
+
+  MCP_Server --> MCP_Tools
+  MCP_Server --> MCP_Resources
+  MCP_Server --> MCP_Local
+  MCP_Local --> MCP_LocalHelpers
+  MCP_Local --> Core_LBug
+  MCP_Local --> Core_Group
+  MCP_Local --> Core_Embeddings
+  MCP_Local --> Core_Platform
+  MCP_Local --> Core_Port
+  MCP_Local --> STOR_RepoMgr
+
+  Core_RunAnalyze --> Core_Ingestion
+  Core_RunAnalyze --> Core_LBug
+  Core_RunAnalyze --> Core_Search
+  Core_RunAnalyze --> Core_Embeddings
+  Core_RunAnalyze --> Core_Analyze
+  Core_RunAnalyze --> STOR_RepoMgr
+  Core_RunAnalyze --> STOR_Git
+  Core_Ingestion --> Core_Graph
+  Core_Ingestion --> INFRA_Config
+  Core_Ingestion --> INFRA_Generated
+  Core_Ingestion --> Core_TreeSitter
+  Core_Group --> STOR_RepoMgr
+  Core_LBug --> Core_Search
+  Core_Port --> INFRA_Generated
+  INFRA_Config --> Core_Port

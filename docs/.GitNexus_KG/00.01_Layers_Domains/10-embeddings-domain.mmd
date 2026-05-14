@@ -1,0 +1,79 @@
+%% GitNexus Embeddings Domain — core/embeddings/
+%% Colors: orange=Core/business, gray=Infra
+
+graph TB
+  subgraph EMBED["Embeddings Domain (core/embeddings/)"]
+    style EMBED fill:#2E2E1E,stroke:#F5A623,color:#CDD6F4
+
+    index_emb("index.ts (barrel)"):::barrel
+    config_emb("config.ts"):::config
+    types_emb("types.ts"):::barrel
+    provider("provider.ts"):::provider
+    hf_env("hf-env.ts"):::provider
+    http_client("http-client.ts"):::provider
+    server_mapping("server-mapping.ts"):::provider
+    embedder("embedder.ts"):::engine
+    embedding_pipeline("embedding-pipeline.ts"):::engine
+    text_generator("text-generator.ts"):::engine
+    chunker("chunker.ts"):::engine
+    character_chunk("character-chunk.ts"):::engine
+    structural_extractor("structural-extractor.ts"):::engine
+    ast_utils("ast-utils.ts"):::util
+    line_index("line-index.ts"):::util
+    cache_loader("cache-loader.ts"):::util
+    diagnostic("diagnostic.ts"):::util
+    exact_search("exact-search.ts"):::util
+
+    index_emb -->|re-exports| types_emb
+    index_emb -->|re-exports| http_client
+    index_emb -->|re-exports| embedder
+    index_emb -->|re-exports| text_generator
+    index_emb -->|re-exports| embedding_pipeline
+    config_emb -->|DEFAULT_EMBEDDING_CONFIG| types_emb
+    config_emb -->|defaultEmbeddingThreads| runtime_capabilities("core/platform/capabilities.ts"):::core
+    config_emb -->|loadPortableConfig| portable_config_emb("config/portable-config.ts"):::infra
+    embedder -->|resolveEmbeddingConfig| config_emb
+    embedder -->|isHttpMode, getHttpDimensions| http_client
+    embedder -->|applyHfEnvOverrides, isHfDownloadFailure| hf_env
+    embedder -->|selectProvider| provider
+    embedder -->|DEFAULT_EMBEDDING_CONFIG| types_emb
+    embedder -->|DEV_APP_ROOT_URL| generated_constants_emb("generated/constants.ts"):::infra
+    embedder -->|getPortability| portability_emb("core/portability/index.ts"):::core
+    embedder -->|logger| logger_emb("core/logger.ts"):::core
+    embedding_pipeline -->|generateEmbeddings| embedder
+    embedding_pipeline -->|generateEmbeddingText| text_generator
+    embedding_pipeline -->|chunkNode, characterChunk| chunker
+    embedding_pipeline -->|extractStructuralNames| structural_extractor
+    embedding_pipeline -->|resolveEmbeddingConfig| config_emb
+    embedding_pipeline -->|rankExactEmbeddingRows| exact_search
+    embedding_pipeline -->|types| types_emb
+    embedding_pipeline -->|getExactScanLimit| platform_capabilities("core/platform/capabilities.ts"):::core
+    embedding_pipeline -->|EmbeddingRepository| embedding_repository("core/lbug/repository/embedding-repository.ts"):::core
+    embedding_pipeline -->|createEmbeddingRepository| vector_store_registry("core/vector-store/registry.ts"):::core
+    embedding_pipeline -->|logger| logger_emb
+    chunker -->|characterChunk| character_chunk
+    chunker -->|ensureAndParse, findDeclarationNode| ast_utils
+    chunker -->|buildLineIndex, resolveChunkLines| line_index
+    chunker -->|types| types_emb
+    character_chunk -->|buildLineIndex, resolveChunkLines| line_index
+    text_generator -->|EmbeddableNode, EmbeddingConfig| types_emb
+    structural_extractor -->|ensureAndParse, findDeclarationNode| ast_utils
+    structural_extractor -->|getProviderForFile| language_provider("core/ingestion/languages/index.ts"):::core
+    structural_extractor -->|MethodExtractorContext, ExtractedMethods| method_types("core/ingestion/method-types.ts"):::core
+    structural_extractor -->|FieldExtractorContext, ExtractedFields| field_types("core/ingestion/field-types.ts"):::core
+    structural_extractor -->|buildTypeEnv| type_env("core/ingestion/type-env.ts"):::core
+    cache_loader -->|CachedEmbedding| types_emb
+    cache_loader -->|loadCachedEmbeddings| lbug_adapter_emb("core/lbug/lbug-adapter.ts"):::core
+    cache_loader -->|batchInsertEmbeddings| embedding_pipeline
+    provider -->|DEFAULT_EMBEDDING_CONFIG| types_emb
+    provider -->|getPortability| portability_emb
+    provider -->|loadPortableConfig, resolveConfigPath| portable_config_emb
+    ast_utils -->|parser-loader symbols| parser_loader("core/tree-sitter/parser-loader.ts"):::core
+
+    classDef barrel fill:#E8B84A,stroke:#F5A623,color:#FFFFFF,stroke-dasharray:5 5
+    classDef config fill:#E8B84A,stroke:#F5A623,color:#FFFFFF
+    classDef provider fill:#D4A017,stroke:#F5A623,color:#FFFFFF
+    classDef engine fill:#D4A017,stroke:#F5A623,color:#FFFFFF
+    classDef util fill:#C8960E,stroke:#F5A623,color:#FFFFFF
+    classDef core fill:#F5A623,stroke:#F5A623,color:#FFFFFF
+    classDef infra fill:#95A5A6,stroke:#95A5A6,color:#FFFFFF

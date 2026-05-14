@@ -1,0 +1,90 @@
+%% Storage Layer — repo-manager Internal Architecture
+%% Color: purple (#9B59B6)
+
+flowchart TB
+  subgraph Barrel["📦 repo-manager.ts (barrel / 122 lines)"]
+    direction TB
+    BR["re-exports:\n• types.ts, constants.ts, errors.ts\n• paths.ts, meta.ts, gitignore.ts\n• config.ts, finalization.ts\n• registry/index.ts (6 fns)"]
+    IMP["imports:\n• getInferredRepoName, resolveRepoIdentityRoot from git.ts\n• types: RepoMeta, RegistryEntry\n• canonicalizePath, getStoragePaths from paths.ts\n• readRegistry, writeRegistry from registry/\n• RegistryNameCollisionError from errors.ts"]
+  end
+
+  subgraph Git["🔄 git.ts (319 lines)"]
+    G1["getInferredRepoName()"]
+    G2["resolveRepoIdentityRoot()"]
+    G3["getRemoteUrl(), getGitRoot()"]
+    G4["getCanonicalRepoRoot()"]
+    G5["parseDiffHunks()"]
+  end
+
+  subgraph Sub["📁 repo-manager/ sub-modules"]
+    direction TB
+
+    T["types.ts\nRepoMeta, IndexedRepo\nRegistryEntry, CwdMatch"]
+    C["constants.ts\nGITNEXUS_DIR = '.gitnexus'"]
+
+    subgraph Errors["⚠️ Error Classes"]
+      E1["RegistryNameCollisionError"]
+      E2["RegistryNotFoundError"]
+      E3["RegistryAmbiguousTargetError"]
+      E4["AnalysisNotFinalizedError"]
+      E5["UnsafeStoragePathError"]
+    end
+
+    P["paths.ts\ncanonicalizePath()\ngetStoragePath()\ngetStoragePaths()\ngetGlobalDir()\ngetGlobalRegistryPath()"]
+
+    M["meta.ts\nloadMeta() / saveMeta()\nhasIndex() / loadRepo()\nfindRepo()\nhasKuzuIndex()\ncleanupOldKuzuFiles()"]
+
+    CFG["config.ts\nloadCLIConfig()\nsaveCLIConfig()"]
+
+    GI["gitignore.ts\nensureGitNexusIgnored()"]
+
+    F["finalization.ts\nassertAnalysisFinalized()"]
+
+    REG["registry/index.ts\nreadRegistry() / writeRegistry()\nunregisterRepo()\nresolveRegistryEntry()\nlistRegisteredRepos()\nfindSiblingClones()"]
+  end
+
+  %% Barrel → sub-module edges
+  BR -.->|"re-export *"| T
+  BR -.->|"re-export *"| C
+  BR -.->|"re-export *"| E1
+  BR -.->|"re-export *"| P
+  BR -.->|"re-export *"| M
+  BR -.->|"re-export *"| GI
+  BR -.->|"re-export *"| CFG
+  BR -.->|"re-export *"| F
+  BR -.->|"readRegistry, unregisterRepo, ..."| REG
+
+  %% Barrel internal imports
+  IMP -->|"imports (internal)"| Git
+
+  %% Intra-submodule deps
+  C -->|GITNEXUS_DIR| P
+  T -->|RegistryEntry| E1
+  T -->|RepoMeta| M
+  T -->|CLIConfig| CFG
+  T -->|RegistryEntry| REG
+  P -->|getStoragePaths| M
+  P -->|getStoragePath| GI
+  P -->|getGlobalDir / getGlobalConfigPath| CFG
+  P -->|getStoragePaths, canonicalizePath| F
+  P -->|getGlobalDir, canonicalizePath| REG
+  E1 -->|AnalysisNotFinalizedError| F
+  E1 -->|UnsafeStoragePath, RegistryNotFound, RegistryAmbiguous| REG
+  REG -->|readRegistry| F
+
+  %% git.ts usage
+  Git --> G1
+  Git --> G2
+
+  %% Styling
+  classDef barrel fill:#9B59B6,color:#fff,stroke:#7D3C98
+  classDef sub fill:#D2B4DE,stroke:#9B59B6
+  classDef registry fill:#8E44AD,color:#fff,stroke:#6C3483
+  classDef git fill:#BB8FCE,stroke:#7D3C98
+  classDef error fill:#E8DAEF,stroke:#9B59B6
+
+  class BR,IMP barrel
+  class T,C,P,M,CFG,GI,F sub
+  class REG registry
+  class Git,G1,G2,G3,G4,G5 git
+  class E1,E2,E3,E4,E5 error

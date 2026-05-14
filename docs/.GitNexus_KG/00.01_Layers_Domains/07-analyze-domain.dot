@@ -1,0 +1,69 @@
+digraph Analyze_Domain {
+  rankdir=TB;
+  label="GitNexus Analyze Domain — core/analyze/ + orchestrator";
+  fontsize=16;
+  fontname="Consolas";
+  compound=true;
+  bgcolor="#1E1E2E";
+  fontcolor="#CDD6F4";
+  edge [fontname="Consolas", fontsize=9];
+  node [fontname="Consolas", fontsize=10, style="filled", shape="box"];
+
+  subgraph cluster_analyze {
+    label="Analyze Domain (core/analyze/ + core/run-analyze.ts)";
+    fontsize=14;
+    fontcolor="#F5A623";
+    style="filled";
+    color="#F5A623";
+    fillcolor="#2E2E1E";
+
+    // Orchestrator
+    run_analyze [label="core/run-analyze.ts\n(orchestrator)", fillcolor="#F5A623", fontcolor="#FFFFFF", shape="diamond"];
+
+    subgraph cluster_analyze_dir {
+      label="core/analyze/";
+      fontsize=12;
+      fontcolor="#F5A623";
+      style="filled";
+      color="#4A4A2E";
+      fillcolor="#2E2E1E";
+
+      types_an [label="types.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      phases [label="phases.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF", style="dashed"];
+      finalizer [label="finalizer.ts", fillcolor="#E8B84A", fontcolor="#FFFFFF"];
+    }
+
+    // Orchestrator → analyze pipeline
+    run_analyze -> types_an [label="AnalyzeOptions, AnalyzeResult", color="#F5A623"];
+    run_analyze -> phases [label="PHASE_LABELS", color="#F5A623"];
+
+    run_analyze -> ingestion_pipeline [label="runPipelineFromRepo", color="#D4A017", style="dashed"];
+    run_analyze -> lbug_adapter_an [label="(lbug adapter open/close)", color="#D4A017", style="dashed"];
+    run_analyze -> fts_indexes [label="createSearchFTSIndexes", color="#D4A017", style="dashed"];
+    run_analyze -> cache_loader [label="loadEmbeddingCache", color="#D4A017", style="dashed"];
+    run_analyze -> diagnostic [label="logPerLabelNodeCounts", color="#D4A017", style="dashed"];
+    run_analyze -> embedding_mode [label="(embedding mode)", color="#D4A017", style="dashed"];
+
+    run_analyze -> repo_manager_an [label="(repo-manager barrel)", color="#9B59B6", style="dashed"];
+    run_analyze -> git_storage_an [label="(git storage)", color="#9B59B6", style="dashed"];
+    run_analyze -> lbug_schema_an [label="STALE_HASH_SENTINEL", color="#D4A017", style="dashed"];
+
+    finalizer -> types_an [label="AnalyzeOptions", color="#F5A623"];
+    finalizer -> repo_manager_an [label="saveMeta, registerRepo, ensureGitNexusIgnored", color="#9B59B6", style="dashed"];
+    finalizer -> git_storage_an [label="getRemoteUrl, hasGitDir", color="#9B59B6", style="dashed"];
+    finalizer -> ai_context_cli [label="generateAIContextFiles", color="#4A90D9", style="dashed"];
+    finalizer -> lbug_schema_an [label="EMBEDDING_TABLE_NAME", color="#D4A017", style="dashed"];
+  }
+
+  // External entitites
+  ingestion_pipeline [label="core/ingestion/pipeline.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  lbug_adapter_an [label="core/lbug/lbug-adapter.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  fts_indexes [label="core/search/fts-indexes.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  cache_loader [label="core/embeddings/cache-loader.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  diagnostic [label="core/embeddings/diagnostic.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  embedding_mode [label="core/embedding-mode.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  lbug_schema_an [label="core/lbug/schema.ts", color="#D4A017", fontcolor="#FFFFFF"];
+  repo_manager_an [label="storage/repo-manager.ts\n(barrel → paths/meta/registry/...)", color="#9B59B6", fontcolor="#FFFFFF"];
+  git_storage_an [label="storage/git.ts", color="#9B59B6", fontcolor="#FFFFFF"];
+  ai_context_cli [label="cli/ai-context.ts", color="#4A90D9", fontcolor="#FFFFFF"];
+}

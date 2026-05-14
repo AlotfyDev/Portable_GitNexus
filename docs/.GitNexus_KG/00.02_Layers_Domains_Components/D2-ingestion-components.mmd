@@ -1,0 +1,278 @@
+---
+title: GitNexus Core/Ingestion — Component-Level Knowledge Graph
+---
+graph LR
+  %% ─── Styling ────────────────────────────────────────────────────
+  classDef mint fill:#E8F8F5,stroke:#1ABC9C,color:#1A5276
+  classDef warm fill:#FDF2E9,stroke:#E67E22,color:#1A5276
+  classDef warm2 fill:#FDEDEC,stroke:#D35400,color:#1A5276
+  classDef lavender fill:#F5EEF8,stroke:#8E44AD,color:#1A5276
+  classDef sky fill:#EBF5FB,stroke:#2980B9,color:#1A5276
+  classDef yellow fill:#FEF9E7,stroke:#F1C40F,color:#1A5276
+  classDef green fill:#EAFAF1,stroke:#27AE60,color:#1A5276
+  classDef gray fill:#F5F5F5,stroke:#95A5A6,color:#1A5276
+  classDef rose fill:#FADBD8,stroke:#E74C3C,color:#1A5276
+  classDef leaf fill:#D5F5E3,stroke:#2ECC71,color:#1A5276
+  classDef leaf2 fill:#D5F5E3,stroke:#1ABC9C,color:#1A5276
+  classDef lgray fill:#E8E8E8,stroke:#7F8C8D,color:#1A5276
+  classDef barrel stroke-dasharray: 6 3,font-weight:bold,font-size:10px
+  classDef phase fill:#D5F5E3,stroke:#2ECC71,color:#1A5276,font-weight:bold
+
+  %% ─── Pipeline Phase Flow (horizontal ordering at top) ──────────
+  subgraph Pipeline["Pipeline Phase Order (13 phases)"]
+    P1[scan]:::phase --> P2[structure]:::phase
+    P2 --> P3[markdown]:::phase
+    P3 --> P4[cobol]:::phase
+    P4 --> P5[parse]:::phase
+    P5 --> P6[routes]:::phase
+    P6 --> P7[tools]:::phase
+    P7 --> P8[orm]:::phase
+    P8 --> P9[cross-file]:::phase
+    P9 --> P10[scope-resolution]:::phase
+    P10 --> P11[mro]:::phase
+    P11 --> P12[communities]:::phase
+    P12 --> P13[processes]:::phase
+  end
+
+  %% ─── Subgraph: call-processor/ ─────────────────────────────────
+  subgraph CallProc["call-processor/ — Call Resolution Engine (26 files)"]
+    direction TB
+    cp_types[types.ts]:::mint
+    cp_constants[constants.ts]:::mint
+    cp_default_dispatch[default-dispatch.ts]:::mint
+    cp_process_calls[process-calls.ts • main orchestrator]:::mint
+    cp_process_extracted[process-calls-from-extracted.ts]:::mint
+    cp_resolve_target[resolve-call-target.ts]:::mint
+    cp_resolve_free[resolve-free-call.ts]:::mint
+    cp_resolve_member[resolve-member-call.ts]:::mint
+    cp_resolve_static[resolve-static-call.ts]:::mint
+    cp_receiver_res[receiver-resolution.ts]:::mint
+    cp_enclosing_fn[enclosing-function.ts]:::mint
+    cp_exported_types[exported-types.ts]:::mint
+    cp_routes[routes.ts]:::mint
+  end
+
+  %% ─── Subgraph: cobol/ ─────────────────────────────────────────
+  subgraph Cobol["cobol/ — COBOL Language Support (12 files)"]
+    direction TB
+    cob_copy[cobol-copy-expander.ts]:::warm
+    cob_preproc_root[cobol-preprocessor.ts]:::warm
+    cob_jcl[jcl-parser.ts]:::warm
+    cob_jcl_proc[jcl-processor.ts]:::warm
+    cob_extract[cobol-preprocessor/extract.ts • 1046 loc]:::warm
+  end
+
+  %% ─── Subgraph: cobol-processor/ ───────────────────────────────
+  subgraph CobolProc["cobol-processor/ — Pipeline Integration (8 files)"]
+    direction TB
+    cbp_main[process-main.ts]:::warm2
+    cbp_graph[graph-mapper.ts • 1047 loc]:::warm2
+    cbp_detectors[detectors.ts]:::warm2
+  end
+
+  %% ─── Subgraph: parsing-processor/ ──────────────────────────────
+  subgraph ParsingProc["parsing-processor/ — Parse Orchestration (4 files)"]
+    direction TB
+    pp_types[types.ts]:::lavender
+    pp_parse[process-parsing.ts]:::lavender
+    pp_sequential[helpers/sequential.ts • 478 loc]:::lavender
+    pp_worker_disp[helpers/worker-dispatch.ts]:::lavender
+  end
+
+  %% ─── Subgraph: scope-extractor/ ────────────────────────────────
+  subgraph ScopeExt["scope-extractor/ — Symbol Extraction (9 files)"]
+    direction TB
+    se_types[types.ts]:::sky
+    se_extract[extract.ts]:::sky
+    se_declarations[helpers/declarations.ts]:::sky
+    se_references[helpers/references.ts]:::sky
+    se_scope_builder[helpers/scope-builder.ts]:::sky
+    se_type_bindings[helpers/type-bindings.ts]:::sky
+  end
+
+  %% ─── Subgraph: type-env/ ───────────────────────────────────────
+  subgraph TypeEnv["type-env/ — Type Environment Builder (11 files)"]
+    direction TB
+    te_build[build.ts • 380 loc]:::yellow
+    te_constants[constants.ts]:::yellow
+    te_types[types.ts]:::yellow
+    te_class_lookup[helpers/class-lookup.ts]:::yellow
+    te_scope_lookup[helpers/scope-lookup.ts]:::yellow
+    te_fixpoint[helpers/fixpoint.ts]:::yellow
+  end
+
+  %% ─── Subgraph: type-extractors/ ────────────────────────────────
+  subgraph TypeExt["type-extractors/ — Per-Language Extractors (27 files)"]
+    direction TB
+    te_ts[typescript.ts • 710 loc]:::green
+    te_ccpp[c-cpp.ts]:::green
+    te_cs[csharp.ts]:::green
+    te_py[python.ts]:::green
+    te_go[go.ts]:::green
+    te_rs[rust.ts]:::green
+    te_sw[swift.ts]:::green
+    te_php[php.ts]:::green
+    te_rb[ruby.ts]:::green
+    te_dart[dart.ts]:::green
+    te_types[types.ts • shared types]:::green
+    te_sh_const[shared/constants.ts]:::green
+    te_sh_generics[shared/generics.ts]:::green
+    te_jvm_shared[jvm/shared.ts]:::green
+  end
+
+  %% ─── Subgraph: tree-sitter-queries/ ────────────────────────────
+  subgraph TSQueries["tree-sitter-queries/ — TS Query Definitions (13 files)"]
+    direction TB
+    tsq_index[index.ts — barrel]:::barrel
+    tsq_ts[typescript.ts • 442 loc]:::gray
+    tsq_cfamily[c-family.ts]:::gray
+    tsq_dart[dart.ts]:::gray
+    tsq_php[php.ts]:::gray
+    tsq_kotlin[kotlin.ts]:::gray
+    tsq_python[python.ts]:::gray
+  end
+
+  %% ─── Subgraph: languages/ ──────────────────────────────────────
+  subgraph Languages["languages/ — Language Provider Impls (~79 files)"]
+    direction TB
+    lang_index[index.ts — barrel • providers map]:::barrel
+    lang_ts[typescript.ts]:::rose
+    lang_sw[swift.ts]:::rose
+    lang_php[php.ts]:::rose
+    lang_rb[ruby.ts]:::rose
+    lang_cs[csharp.ts]:::rose
+    lang_rs[rust.ts]:::rose
+    lang_kt[kotlin.ts]:::rose
+    lang_py[python.ts]:::rose
+    lang_go[go.ts]:::rose
+    lang_ccpp[c-cpp.ts]:::rose
+  end
+
+  %% ─── Subgraph: pipeline-phases/ ────────────────────────────────
+  subgraph PP["pipeline-phases/ — Phase Implementations (19 files)"]
+    direction TB
+    pp_index[index.ts — barrel]:::barrel
+    pp_types2[types.ts — phase contracts]:::leaf
+    pp_runner[runner.ts • pipeline executor]:::leaf
+    pp_parse_impl[parse-impl.ts • 627 loc]:::leaf
+    pp_routes2[routes.ts]:::leaf
+    pp_wildcard[wildcard-synthesis.ts]:::leaf
+  end
+
+  %% ─── Subgraph: model/ ──────────────────────────────────────────
+  subgraph Model["model/ — Semantic Model & Registries (11 files)"]
+    direction TB
+    mdl_index[index.ts — barrel]:::barrel
+    mdl_semantic[semantic-model.ts • 273 loc]:::lgray
+    mdl_symbol_table[symbol-table.ts • 363 loc]:::lgray
+    mdl_type_reg[type-registry.ts]:::lgray
+    mdl_method_reg[method-registry.ts]:::lgray
+    mdl_field_reg[field-registry.ts]:::lgray
+    mdl_heritage[heritage-map.ts]:::lgray
+    mdl_resolve[resolve.ts]:::lgray
+    mdl_reg_table[registration-table.ts]:::lgray
+  end
+
+  %% ─── Subgraph: utils/ ──────────────────────────────────────────
+  subgraph Utils["utils/ — Shared Utilities (9 files)"]
+    direction TB
+    util_ast[ast-helpers.ts • 600 loc]:::lgray
+    util_call[call-analysis.ts • 660 loc]:::lgray
+    util_method[method-props.ts]:::lgray
+    util_graph[graph-sort.ts]:::lgray
+    util_ruby[ruby-self-call.ts]:::lgray
+  end
+
+  %% ─── Subgraph: workers/ ────────────────────────────────────────
+  subgraph Workers["workers/ — Parse Worker Pool (10 files)"]
+    direction TB
+    wk_main[parse-worker.ts]:::leaf2
+    wk_pool[worker-pool.ts • 484 loc]:::leaf2
+    wk_file_group[process-file-group.ts • 924 loc]:::leaf2
+    wk_cache[helpers/cache.ts]:::leaf2
+    wk_route_extr[helpers/route-extractor.ts]:::leaf2
+  end
+
+  %% ─── Subgraph: import-resolvers/ ───────────────────────────────
+  subgraph ImportResolvers["import-resolvers/ — Import Resolution (22 files)"]
+    direction TB
+    ir_factory[resolver-factory.ts]:::sky
+    ir_standard[standard.ts]:::sky
+    ir_types2[types.ts]:::sky
+    ir_utils[utils.ts]:::sky
+    ir_csharp[csharp.ts]:::sky
+    ir_jvm[jvm.ts]:::sky
+    ir_python[python.ts]:::sky
+  end
+
+  %% ─── Subgraph: scope-resolution/ ───────────────────────────────
+  subgraph ScopeRes["scope-resolution/ — Ring-3 Resolution (~21 files)"]
+    direction TB
+    sr_contract[contract/scope-resolver.ts • 567 loc]:::sky
+    sr_pipeline[pipeline/run.ts • 302 loc]:::sky
+    sr_phase[pipeline/phase.ts]:::sky
+    sr_comp_recv[passes/compound-receiver.ts • 546 loc]:::sky
+    sr_recv_calls[passes/receiver-bound-calls.ts • 501 loc]:::sky
+    sr_walkers[scope/walkers.ts • 469 loc]:::sky
+  end
+
+  %% ─── Core Processing Chain ─────────────────────────────────────
+  P5 --> pp_parse_impl
+  pp_parse_impl --> wk_main
+
+  %% call-processor feeds into processing
+  cp_process_calls --> cp_process_extracted
+  cp_process_extracted --> se_extract
+
+  %% scope-extraction feeds into type-env
+  se_extract --> te_build
+
+  %% type-env uses model
+  te_build --> mdl_semantic
+
+  %% pipeline cobol → cobol-processor
+  P4 --> cbp_main
+
+  %% workers extract scopes
+  wk_file_group --> se_extract
+
+  %% import-processor uses import-resolvers
+  ir_factory --> ir_standard
+  ir_factory --> ir_csharp
+  ir_factory --> ir_jvm
+  ir_factory --> ir_python
+
+  %% scope-resolution phase
+  P9 --> sr_contract
+  sr_contract --> sr_pipeline
+  sr_pipeline --> sr_comp_recv
+  sr_pipeline --> sr_recv_calls
+
+  %% type-extractors used by languages
+  te_ts -.-> lang_ts
+  te_py -.-> lang_py
+  te_ccpp -.-> lang_ccpp
+
+  %% tree-sitter queries used by parse
+  tsq_index -.-> P5
+
+  %% model used by multiple consumers
+  mdl_type_reg -.-> te_build
+  mdl_method_reg -.-> te_build
+
+  %% utils used everywhere
+  util_ast -.-> cp_process_calls
+  util_ast -.-> se_extract
+  util_call -.-> cp_process_calls
+
+  %% language index re-exports providers
+  lang_index -.-> lang_ts
+  lang_index -.-> lang_py
+  lang_index -.-> lang_go
+
+  %% ─── Legend ─────────────────────────────────────────────────────
+  subgraph Legend["Legend"]
+    L1[Solid = direct dependency / pipeline flow]:::lgray
+    L2[Dotted = indirect / re-export / shared types]:::lgray
+    L3[Barrel files have bold, dashed borders]:::lgray
+  end
