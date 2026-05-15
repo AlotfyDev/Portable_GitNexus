@@ -1,2 +1,24 @@
+# Dependencies
 node_modules/
+
+# Build output
+dist/
+dist-bun/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Build artifacts in sub-packages
+shared/dist/
+ui/dist/
+
+# Third-party
 third-party/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

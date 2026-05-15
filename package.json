@@ -26,6 +26,8 @@
     "static-analysis",
     "codebase-indexing"
   ],
+  "private": true,
+  "workspaces": ["shared", "ui", "vendor/*", "!vendor/gitnexus-shared"],
   "type": "module",
   "bin": {
     "gitnexus": "dist/cli/index.js"
@@ -106,7 +108,7 @@
     "@types/node": "^25.6.0",
     "@types/uuid": "^11.0.0",
     "@vitest/coverage-v8": "^4.0.18",
-    "gitnexus-shared": "file:./vendor/gitnexus-shared",
+    "gitnexus-shared": "file:./shared",
     "tsx": "^4.0.0",
     "typescript": "^5.4.5",
     "vitest": "^4.0.18"

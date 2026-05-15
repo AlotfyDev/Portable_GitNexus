@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const SHARED_ROOT = path.resolve(ROOT, '..', 'gitnexus-shared');
+const SHARED_ROOT = path.resolve(ROOT, 'shared');
 const DIST = path.join(ROOT, 'dist');
 const SHARED_DEST = path.join(DIST, '_shared');
 
@@ -71,7 +71,7 @@ const cliEntry = path.join(DIST, 'cli', 'index.js');
 if (fs.existsSync(cliEntry)) fs.chmodSync(cliEntry, 0o755);
 
 // ── 6. Build & copy web UI ──────────────────────────────────────────
-const WEB_ROOT = path.resolve(ROOT, '..', 'gitnexus-web');
+const WEB_ROOT = path.resolve(ROOT, 'ui');
 const WEB_DEST = path.join(DIST, '..', 'web');
 
 if (fs.existsSync(path.join(WEB_ROOT, 'package.json'))) {
