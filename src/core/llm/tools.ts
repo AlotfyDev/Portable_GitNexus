@@ -1,0 +1,1291 @@
+/**
+ * Graph RAG Tools for LangChain Agent
+ *
+ * Consolidated tools (7 total):
+ * - search: Hybrid search (BM25 + semantic + RRF), grouped by process/cluster
+ * - cypher: Execute Cypher queries (auto-embeds {{QUERY_VECTOR}} if present)
+ * - grep: Regex pattern search across files
+ * - read: Read file content by path
+ * - overview: Codebase map (clusters + processes)
+ * - explore: Deep dive on a symbol, cluster, or process
+ * - impact: Impact analysis (what depends on / is affected by changes)
+ */
+
+import { tool } from '@langchain/core/tools';
+import { z } from 'zod';
+import { NODE_TABLES, REL_TYPES } from 'gitnexus-shared';
+
+const validLabel = (label: string): boolean => (NODE_TABLES as readonly string[]).includes(label);
+
+const validRelType = (t: string): boolean => (REL_TYPES as readonly string[]).includes(t);
+
+export interface EnrichedSearchResult {
+  nodeId?: string;
+  name?: string;
+  label?: string;
+  filePath: string;
+  startLine?: number;
+  endLine?: number;
+  sources?: string[];
+  score?: number;
+  connections?: {
+    outgoing?: Array<{ name: string; type: string; confidence?: number }>;
+    incoming?: Array<{ name: string; type: string; confidence?: number }>;
+  };
+  cluster?: string;
+  processes?: Array<{
+    id: string;
+    label: string;
+    step?: number;
+    stepCount?: number;
+  }>;
+  [key: string]: unknown;
+}
+
+export interface GrepResult {
+  filePath: string;
+  line: number;
+  text: string;
+}
+
+export interface GraphRAGBackend {
+  executeQuery: (cypher: string) => Promise<Record<string, unknown>[]>;
+  search: (
+    query: string,
+    opts?: { limit?: number; mode?: 'hybrid' | 'semantic' | 'bm25'; enrich?: boolean },
+  ) => Promise<EnrichedSearchResult[]>;
+  grep: (pattern: string, limit?: number) => Promise<GrepResult[]>;
+  readFile: (filePath: string) => Promise<string>;
+}
+
+export const createGraphRAGTools = (backend: GraphRAGBackend) => {
+  const { executeQuery, search: backendSearch, grep: backendGrep, readFile } = backend;
+
+  const searchTool = tool(
+    async ({
+      query,
+      limit,
+      groupByProcess,
+    }: {
+      query: string;
+      limit?: number;
+      groupByProcess?: boolean;
+    }) => {
+      const k = limit ?? 10;
+      const shouldGroup = groupByProcess ?? true;
+
+      let searchResults: EnrichedSearchResult[];
+      try {
+        searchResults = await backendSearch(query, { limit: k, enrich: true });
+      } catch {
+        return 'Search is not available. Please load a repository first.';
+      }
+
+      if (searchResults.length === 0) {
+        return `No code found matching "${query}". Try different terms or use grep for exact patterns.`;
+      }
+
+      type ProcessInfo = { id: string; label: string; step?: number; stepCount?: number };
+      type ResultInfo = {
+        idx: number;
+        nodeId: string;
+        name: string;
+        label: string;
+        filePath: string;
+        location: string;
+        sources: string;
+        score: string;
+        connections: string;
+        clusterLabel: string;
+        processes: ProcessInfo[];
+      };
+
+      const results: ResultInfo[] = searchResults.slice(0, k).map((r, i) => {
+        const nodeId = r.nodeId || '';
+        const name = r.name || r.filePath?.split('/').pop() || 'Unknown';
+        const label = r.label || 'File';
+        const filePath = r.filePath || '';
+        const location = r.startLine ? ` (lines ${r.startLine}-${r.endLine})` : '';
+        const sources = r.sources?.join('+') || 'hybrid';
+        const score = r.score ? ` [score: ${r.score.toFixed(2)}]` : '';
+
+        let connections = '';
+        if (r.connections) {
+          const outgoing = (r.connections.outgoing || []).filter((c) => c?.name).slice(0, 3);
+          const incoming = (r.connections.incoming || []).filter((c) => c?.name).slice(0, 3);
+          const fmt = (
+            c: { name: string; type: string; confidence?: number },
+            dir: 'out' | 'in',
+          ) => {
+            const conf = c.confidence ? Math.round(c.confidence * 100) : 100;
+            return dir === 'out'
+              ? `-[${c.type} ${conf}%]-> ${c.name}`
+              : `<-[${c.type} ${conf}%]- ${c.name}`;
+          };
+          const outList = outgoing.map((c) => fmt(c, 'out'));
+          const inList = incoming.map((c) => fmt(c, 'in'));
+          if (outList.length || inList.length) {
+            connections = `\n    Connections: ${[...outList, ...inList].join(', ')}`;
+          }
+        }
+
+        const clusterLabel = (r.cluster as string) || 'Unclustered';
+        const processes: ProcessInfo[] = (r.processes || []).filter((p) => p.id && p.label);
+
+        return {
+          idx: i + 1,
+          nodeId,
+          name,
+          label,
+          filePath,
+          location,
+          sources,
+          score,
+          connections,
+          clusterLabel,
+          processes,
+        };
+      });
+
+      const formatResult = (r: ResultInfo, stepInfo?: ProcessInfo) => {
+        const stepLabel = stepInfo?.step
+          ? ` (step ${stepInfo.step}/${stepInfo.stepCount ?? '?'})`
+          : '';
+        return `[${r.idx}] ${r.label}: ${r.name}${r.score}${stepLabel}\n    ID: ${r.nodeId}\n    File: ${r.filePath}${r.location}\n    Cluster: ${r.clusterLabel}\n    Found by: ${r.sources}${r.connections}`;
+      };
+
+      if (!shouldGroup) {
+        return `Found ${searchResults.length} matches:\n\n${results.map((r) => formatResult(r)).join('\n\n')}`;
+      }
+
+      const processMap = new Map<
+        string,
+        {
+          label: string;
+          stepCount?: number;
+          entries: { result: ResultInfo; step?: number; stepCount?: number }[];
+        }
+      >();
+      const noProcessKey = '__no_process__';
+
+      for (const r of results) {
+        if (r.processes.length === 0) {
+          if (!processMap.has(noProcessKey)) {
+            processMap.set(noProcessKey, { label: 'No process', entries: [] });
+          }
+          processMap.get(noProcessKey)!.entries.push({ result: r });
+          continue;
+        }
+
+        for (const p of r.processes) {
+          if (!processMap.has(p.id)) {
+            processMap.set(p.id, { label: p.label, stepCount: p.stepCount, entries: [] });
+          }
+          processMap.get(p.id)!.entries.push({ result: r, step: p.step, stepCount: p.stepCount });
+        }
+      }
+
+      const sortedProcesses = Array.from(processMap.entries()).sort((a, b) => {
+        const aCount = a[1].entries.length;
+        const bCount = b[1].entries.length;
+        return bCount - aCount;
+      });
+
+      const lines: string[] = [];
+      lines.push(`Found ${searchResults.length} matches grouped by process:`);
+      lines.push('');
+
+      for (const [pid, group] of sortedProcesses) {
+        const stepInfo = group.stepCount ? `, ${group.stepCount} steps` : '';
+        const header =
+          pid === noProcessKey
+            ? `NO PROCESS (${group.entries.length} matches)`
+            : `PROCESS: ${group.label} (${group.entries.length} matches${stepInfo})`;
+        lines.push(header);
+        group.entries.forEach((entry) => {
+          const stepLabel = entry.step
+            ? { id: pid, label: group.label, step: entry.step, stepCount: entry.stepCount }
+            : undefined;
+          lines.push(formatResult(entry.result, stepLabel));
+        });
+        lines.push('');
+      }
+
+      return lines.join('\n').trim();
+    },
+    {
+      name: 'search',
+      description:
+        'Search for code by keywords or concepts. Combines keyword matching and semantic understanding. Groups results by process with cluster context.',
+      schema: z.object({
+        query: z.string().describe('What you are looking for (e.g., "authentication middleware", "database connection")'),
+        groupByProcess: z.boolean().optional().nullable().describe('Group results by process (default: true)'),
+        limit: z.number().optional().nullable().describe('Max results to return (default: 10)'),
+      }),
+    },
+  );
+
+  const cypherTool = tool(
+    async ({ query, cypher }: { query?: string; cypher: string }) => {
+      try {
+        if (cypher.includes('{{QUERY_VECTOR}}')) {
+          if (!query) {
+            return "Error: Your Cypher contains {{QUERY_VECTOR}} but you didn't provide a 'query' to embed. Add a natural language query.";
+          }
+          try {
+            const semanticResults = await backendSearch(query, { limit: 10, mode: 'semantic' });
+            if (semanticResults.length === 0) {
+              return 'Semantic search returned no results. Embeddings may not be generated yet.';
+            }
+            const formatted = semanticResults
+              .map(
+                (r, i) =>
+                  `[${i + 1}] ${r.label || 'File'}: ${r.name || r.filePath?.split('/').pop() || '?'} (score: ${(r.score ?? 0).toFixed(3)})\n    File: ${r.filePath || 'n/a'}`,
+              )
+              .join('\n');
+            return `Semantic search for "${query}" (${semanticResults.length} results):\n\n${formatted}`;
+          } catch {
+            return 'Semantic search not available. Embeddings may not be generated. Use a non-vector Cypher query instead.';
+          }
+        }
+
+        const results = await executeQuery(cypher);
+
+        if (results.length === 0) {
+          return 'Query returned no results.';
+        }
+
+        const firstRow = results[0];
+        const columnNames =
+          typeof firstRow === 'object' && !Array.isArray(firstRow) ? Object.keys(firstRow) : [];
+
+        if (columnNames.length > 0) {
+          const header = `| ${columnNames.join(' | ')} |`;
+          const separator = `|${columnNames.map(() => '---').join('|')}|`;
+
+          const rows = results
+            .slice(0, 50)
+            .map((row) => {
+              const values = columnNames.map((col) => {
+                const val = row[col];
+                if (val === null || val === undefined) return '';
+                if (typeof val === 'object') return JSON.stringify(val);
+                const str = String(val).replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+                return str.length > 60 ? str.slice(0, 57) + '...' : str;
+              });
+              return `| ${values.join(' | ')} |`;
+            })
+            .join('\n');
+
+          const truncated = results.length > 50 ? `\n\n_(${results.length - 50} more rows)_` : '';
+          return `**${results.length} results:**\n\n${header}\n${separator}\n${rows}${truncated}`;
+        }
+
+        const formatted = results.slice(0, 50).map((row, i) => {
+          return `[${i + 1}] ${JSON.stringify(row)}`;
+        });
+        const truncated = results.length > 50 ? `\n... (${results.length - 50} more)` : '';
+        return `${results.length} results:\n${formatted.join('\n')}${truncated}`;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return `Cypher error: ${message}\n\nCheck your query syntax. Node tables: File, Folder, Function, Class, Interface, Method, CodeElement. Relation: CodeRelation with type property (CONTAINS, DEFINES, IMPORTS, CALLS). Example: MATCH (f:File)-[:CodeRelation {type: 'IMPORTS'}]->(g:File) RETURN f, g`;
+      }
+    },
+    {
+      name: 'cypher',
+      description: `Execute a Cypher query against the code graph. Use for structural queries like finding callers, tracing imports, class inheritance, or custom traversals.
+
+Node tables: File, Folder, Function, Class, Interface, Method, CodeElement
+Relation: CodeRelation (single table with 'type' property: CONTAINS, DEFINES, IMPORTS, CALLS, EXTENDS, IMPLEMENTS)`,
+      schema: z.object({
+        cypher: z.string().describe('The Cypher query to execute'),
+        query: z.string().optional().nullable().describe('Natural language query to embed (required if cypher contains {{QUERY_VECTOR}})'),
+      }),
+    },
+  );
+
+  const grepTool = tool(
+    async ({
+      pattern,
+      fileFilter,
+      caseSensitive,
+      maxResults,
+    }: {
+      pattern: string;
+      fileFilter?: string;
+      caseSensitive?: boolean;
+      maxResults?: number;
+    }) => {
+      try {
+        try {
+          new RegExp(pattern, caseSensitive ? 'g' : 'gi');
+        } catch (e) {
+          return `Invalid regex: ${pattern}. Error: ${e instanceof Error ? e.message : String(e)}`;
+        }
+
+        const limit = maxResults ?? 100;
+        const fullPattern = fileFilter
+          ? `(?=.*${fileFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}).*${pattern}`
+          : pattern;
+
+        const results = await backendGrep(fullPattern, limit);
+
+        if (results.length === 0) {
+          return `No matches for "${pattern}"${fileFilter ? ` in files matching "${fileFilter}"` : ''}`;
+        }
+
+        const formatted = results.map((r) => `${r.filePath}:${r.line}: ${r.text}`).join('\n');
+        const truncatedMsg = results.length >= limit ? `\n\n(Showing first ${limit} results)` : '';
+
+        return `Found ${results.length} matches:\n\n${formatted}${truncatedMsg}`;
+      } catch (error) {
+        return `Grep error: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    },
+    {
+      name: 'grep',
+      description: 'Search for exact text patterns across all files using regex.',
+      schema: z.object({
+        pattern: z.string().describe('Regex pattern to search for'),
+        fileFilter: z.string().optional().nullable().describe('Only search files containing this string'),
+        caseSensitive: z.boolean().optional().nullable().describe('Case-sensitive search (default: false)'),
+        maxResults: z.number().optional().nullable().describe('Max results (default: 100)'),
+      }),
+    },
+  );
+
+  const readTool = tool(
+    async ({ filePath }: { filePath: string }) => {
+      try {
+        const content = await readFile(filePath);
+
+        const MAX_CONTENT = 50000;
+        if (content.length > MAX_CONTENT) {
+          const lines = content.split('\n').length;
+          return `File: ${filePath} (${lines} lines, truncated)\n\n${content.slice(0, MAX_CONTENT)}\n\n... [truncated]`;
+        }
+
+        const lines = content.split('\n').length;
+        return `File: ${filePath} (${lines} lines)\n\n${content}`;
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('not found') || message.includes('404')) {
+          return `File not found: "${filePath}". Use grep to search for the correct path.`;
+        }
+        return `Error reading file: ${message}`;
+      }
+    },
+    {
+      name: 'read',
+      description: 'Read the full content of a file.',
+      schema: z.object({
+        filePath: z.string().describe('File path to read (can be partial like "src/utils.ts")'),
+      }),
+    },
+  );
+
+  const overviewTool = tool(
+    async () => {
+      try {
+        const clustersQuery = `
+          MATCH (c:Community)
+          RETURN c.id AS id, c.label AS label, c.cohesion AS cohesion, c.symbolCount AS symbolCount, c.description AS description
+          ORDER BY c.symbolCount DESC
+          LIMIT 200
+        `;
+        const processesQuery = `
+          MATCH (p:Process)
+          RETURN p.id AS id, p.label AS label, p.processType AS type, p.stepCount AS stepCount, p.communities AS communities
+          ORDER BY p.stepCount DESC
+          LIMIT 200
+        `;
+        const depsQuery = `
+          MATCH (a)-[:CodeRelation {type: 'CALLS'}]->(b)
+          MATCH (a)-[:CodeRelation {type: 'MEMBER_OF'}]->(c1:Community)
+          MATCH (b)-[:CodeRelation {type: 'MEMBER_OF'}]->(c2:Community)
+          WHERE c1.id <> c2.id
+          RETURN c1.label AS \`from\`, c2.label AS \`to\`, COUNT(*) AS calls
+          ORDER BY calls DESC
+          LIMIT 15
+        `;
+        const criticalQuery = `
+          MATCH (s)-[r:CodeRelation {type: 'STEP_IN_PROCESS'}]->(p:Process)
+          RETURN p.label AS label, COUNT(r) AS steps
+          ORDER BY steps DESC
+          LIMIT 10
+        `;
+
+        const [clusters, processes, deps, critical] = await Promise.all([
+          executeQuery(clustersQuery),
+          executeQuery(processesQuery),
+          executeQuery(depsQuery),
+          executeQuery(criticalQuery),
+        ]);
+
+        const clusterLines = clusters.map((row: any) => {
+          const label = Array.isArray(row) ? row[1] : row.label;
+          const symbols = Array.isArray(row) ? row[3] : row.symbolCount;
+          const cohesion = Array.isArray(row) ? row[2] : row.cohesion;
+          const desc = Array.isArray(row) ? row[4] : row.description;
+          const cohesionText = cohesion !== null && cohesion !== undefined ? Number(cohesion).toFixed(2) : '';
+          return `| ${label || ''} | ${symbols ?? ''} | ${cohesionText} | ${desc ?? ''} |`;
+        });
+
+        const processLines = processes.map((row: any) => {
+          const label = Array.isArray(row) ? row[1] : row.label;
+          const steps = Array.isArray(row) ? row[3] : row.stepCount;
+          const type = Array.isArray(row) ? row[2] : row.type;
+          const communities = Array.isArray(row) ? row[4] : row.communities;
+          const clusterText = Array.isArray(communities) ? communities.length : communities ? 1 : 0;
+          return `| ${label || ''} | ${steps ?? ''} | ${type ?? ''} | ${clusterText} |`;
+        });
+
+        const depLines = deps.map((row: any) => {
+          const from = Array.isArray(row) ? row[0] : row.from;
+          const to = Array.isArray(row) ? row[1] : row.to;
+          const calls = Array.isArray(row) ? row[2] : row.calls;
+          return `- ${from} -> ${to} (${calls} calls)`;
+        });
+
+        const criticalLines = critical.map((row: any) => {
+          const label = Array.isArray(row) ? row[0] : row.label;
+          const steps = Array.isArray(row) ? row[1] : row.steps;
+          return `- ${label} (${steps} steps)`;
+        });
+
+        return [
+          `CLUSTERS (${clusters.length} total):`,
+          `| Cluster | Symbols | Cohesion | Description |`,
+          `| --- | --- | --- | --- |`,
+          ...clusterLines,
+          ``,
+          `PROCESSES (${processes.length} total):`,
+          `| Process | Steps | Type | Clusters |`,
+          `| --- | --- | --- | --- |`,
+          ...processLines,
+          ``,
+          `CLUSTER DEPENDENCIES:`,
+          ...(depLines.length > 0 ? depLines : ['- None found']),
+          ``,
+          `CRITICAL PATHS:`,
+          ...(criticalLines.length > 0 ? criticalLines : ['- None found']),
+        ].join('\n');
+      } catch (error) {
+        return `Overview error: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    },
+    {
+      name: 'overview',
+      description: 'Codebase map showing all clusters and processes, plus cross-cluster dependencies.',
+      schema: z.object({}),
+    },
+  );
+
+  const exploreTool = tool(
+    async ({
+      target,
+      type,
+    }: {
+      target: string;
+      type?: 'symbol' | 'cluster' | 'process' | null;
+    }) => {
+      const safeTarget = target.replace(/'/g, "''");
+      let resolvedType = type ?? null;
+      let processRow: any | null = null;
+      let communityRow: any | null = null;
+      let symbolRow: any | null = null;
+
+      const getRowValue = (row: any, idx: number, key: string) =>
+        Array.isArray(row) ? row[idx] : row[key];
+
+      if (!resolvedType || resolvedType === 'process') {
+        const processQuery = `
+          MATCH (p:Process)
+          WHERE p.id = '${safeTarget}' OR p.label = '${safeTarget}'
+          RETURN p.id AS id, p.label AS label, p.processType AS type, p.stepCount AS stepCount
+          LIMIT 1
+        `;
+        const processRes = await executeQuery(processQuery);
+        if (processRes.length > 0) {
+          processRow = processRes[0];
+          resolvedType = 'process';
+        }
+      }
+
+      if (!resolvedType || resolvedType === 'cluster') {
+        const communityQuery = `
+          MATCH (c:Community)
+          WHERE c.id = '${safeTarget}' OR c.label = '${safeTarget}' OR c.heuristicLabel = '${safeTarget}'
+          RETURN c.id AS id, c.label AS label, c.cohesion AS cohesion, c.symbolCount AS symbolCount, c.description AS description
+          LIMIT 1
+        `;
+        const communityRes = await executeQuery(communityQuery);
+        if (communityRes.length > 0) {
+          communityRow = communityRes[0];
+          resolvedType = 'cluster';
+        }
+      }
+
+      if (!resolvedType || resolvedType === 'symbol') {
+        const symbolQuery = `
+          MATCH (n)
+          WHERE n.name = '${safeTarget}' OR n.id = '${safeTarget}' OR n.filePath = '${safeTarget}'
+          RETURN n.id AS id, n.name AS name, n.filePath AS filePath, label(n) AS nodeType
+          LIMIT 5
+        `;
+        const symbolRes = await executeQuery(symbolQuery);
+        if (symbolRes.length > 0) {
+          symbolRow = symbolRes[0];
+          resolvedType = 'symbol';
+        }
+      }
+
+      if (!resolvedType) {
+        return `Could not find "${target}" as a symbol, cluster, or process. Try search first.`;
+      }
+
+      if (resolvedType === 'process') {
+        const pid = getRowValue(processRow, 0, 'id');
+        const label = getRowValue(processRow, 1, 'label');
+        const ptype = getRowValue(processRow, 2, 'type');
+        const stepCount = getRowValue(processRow, 3, 'stepCount');
+
+        const stepsQuery = `
+          MATCH (s)-[r:CodeRelation {type: 'STEP_IN_PROCESS'}]->(p:Process {id: '${pid.replace(/'/g, "''")}'})
+          RETURN s.name AS name, s.filePath AS filePath, r.step AS step
+          ORDER BY r.step
+        `;
+        const clustersQuery = `
+          MATCH (c:Community)<-[:CodeRelation {type: 'MEMBER_OF'}]-(s)
+          MATCH (s)-[:CodeRelation {type: 'STEP_IN_PROCESS'}]->(p:Process {id: '${pid.replace(/'/g, "''")}'})
+          RETURN DISTINCT c.id AS id, c.label AS label, c.description AS description
+          ORDER BY c.label
+          LIMIT 20
+        `;
+
+        const [steps, clusters] = await Promise.all([
+          executeQuery(stepsQuery),
+          executeQuery(clustersQuery),
+        ]);
+
+        const stepLines = steps.map((row: any) => {
+          const name = getRowValue(row, 0, 'name');
+          const filePath = getRowValue(row, 1, 'filePath');
+          const step = getRowValue(row, 2, 'step');
+          return `- ${step}. ${name} (${filePath || 'n/a'})`;
+        });
+
+        const clusterLines = clusters.map((row: any) => {
+          const clabel = getRowValue(row, 1, 'label');
+          const desc = getRowValue(row, 2, 'description');
+          return `- ${clabel}${desc ? ` — ${desc}` : ''}`;
+        });
+
+        return [
+          `PROCESS: ${label}`,
+          `Type: ${ptype || 'n/a'}`,
+          `Steps: ${stepCount ?? steps.length}`,
+          ``,
+          `STEPS:`,
+          ...(stepLines.length > 0 ? stepLines : ['- None found']),
+          ``,
+          `CLUSTERS TOUCHED:`,
+          ...(clusterLines.length > 0 ? clusterLines : ['- None found']),
+        ].join('\n');
+      }
+
+      if (resolvedType === 'cluster') {
+        const cid = getRowValue(communityRow, 0, 'id');
+        const label = getRowValue(communityRow, 1, 'label');
+        const cohesion = getRowValue(communityRow, 2, 'cohesion');
+        const symbolCount = getRowValue(communityRow, 3, 'symbolCount');
+        const description = getRowValue(communityRow, 4, 'description');
+
+        const membersQuery = `
+          MATCH (c:Community {id: '${cid.replace(/'/g, "''")}'})<-[:CodeRelation {type: 'MEMBER_OF'}]-(m)
+          RETURN m.name AS name, m.filePath AS filePath, label(m) AS nodeType
+          LIMIT 50
+        `;
+        const processesQuery = `
+          MATCH (c:Community {id: '${cid.replace(/'/g, "''")}'})<-[:CodeRelation {type: 'MEMBER_OF'}]-(s)
+          MATCH (s)-[:CodeRelation {type: 'STEP_IN_PROCESS'}]->(p:Process)
+          RETURN DISTINCT p.id AS id, p.label AS label, p.stepCount AS stepCount
+          ORDER BY p.stepCount DESC
+          LIMIT 20
+        `;
+
+        const [members, processes] = await Promise.all([
+          executeQuery(membersQuery),
+          executeQuery(processesQuery),
+        ]);
+
+        const memberLines = members.map((row: any) => {
+          const name = getRowValue(row, 0, 'name');
+          const filePath = getRowValue(row, 1, 'filePath');
+          const nodeType = getRowValue(row, 2, 'nodeType');
+          return `- ${nodeType}: ${name} (${filePath || 'n/a'})`;
+        });
+
+        const processLines = processes.map((row: any) => {
+          const plabel = getRowValue(row, 1, 'label');
+          const steps = getRowValue(row, 2, 'stepCount');
+          return `- ${plabel} (${steps} steps)`;
+        });
+
+        return [
+          `CLUSTER: ${label}`,
+          `Symbols: ${symbolCount ?? members.length}`,
+          `Cohesion: ${cohesion !== null && cohesion !== undefined ? Number(cohesion).toFixed(2) : 'n/a'}`,
+          `Description: ${description || 'n/a'}`,
+          ``,
+          `TOP MEMBERS:`,
+          ...(memberLines.length > 0 ? memberLines : ['- None found']),
+          ``,
+          `PROCESSES TOUCHING THIS CLUSTER:`,
+          ...(processLines.length > 0 ? processLines : ['- None found']),
+        ].join('\n');
+      }
+
+      if (resolvedType === 'symbol') {
+        const nodeId = getRowValue(symbolRow, 0, 'id');
+        const name = getRowValue(symbolRow, 1, 'name');
+        const filePath = getRowValue(symbolRow, 2, 'filePath');
+        const nodeType = getRowValue(symbolRow, 3, 'nodeType');
+
+        if (!validLabel(nodeType)) {
+          return `Unknown node type "${nodeType}" for symbol "${target}".`;
+        }
+
+        const clusterQuery = `
+          MATCH (n:${nodeType} {id: '${String(nodeId).replace(/'/g, "''")}'})
+          MATCH (n)-[:CodeRelation {type: 'MEMBER_OF'}]->(c:Community)
+          RETURN c.label AS label, c.description AS description
+          LIMIT 1
+        `;
+        const processQuery = `
+          MATCH (n:${nodeType} {id: '${String(nodeId).replace(/'/g, "''")}'})
+          MATCH (n)-[r:CodeRelation {type: 'STEP_IN_PROCESS'}]->(p:Process)
+          RETURN p.label AS label, r.step AS step, p.stepCount AS stepCount
+          ORDER BY r.step
+        `;
+        const connectionsQuery = `
+          MATCH (n:${nodeType} {id: '${String(nodeId).replace(/'/g, "''")}'})
+          OPTIONAL MATCH (n)-[r1:CodeRelation]->(dst)
+          OPTIONAL MATCH (src)-[r2:CodeRelation]->(n)
+          RETURN 
+            collect(DISTINCT {name: dst.name, type: r1.type, confidence: r1.confidence}) AS outgoing,
+            collect(DISTINCT {name: src.name, type: r2.type, confidence: r2.confidence}) AS incoming
+          LIMIT 1
+        `;
+
+        const [clusterRes, processRes, connRes] = await Promise.all([
+          executeQuery(clusterQuery),
+          executeQuery(processQuery),
+          executeQuery(connectionsQuery),
+        ]);
+
+        const clusterLabel = clusterRes.length > 0 ? getRowValue(clusterRes[0], 0, 'label') : 'Unclustered';
+        const clusterDesc = clusterRes.length > 0 ? getRowValue(clusterRes[0], 1, 'description') : '';
+
+        const processLines = processRes.map((row: any) => {
+          const plabel = getRowValue(row, 0, 'label');
+          const step = getRowValue(row, 1, 'step');
+          const stepCount = getRowValue(row, 2, 'stepCount');
+          return `- ${plabel} (step ${step}/${stepCount ?? '?'})`;
+        });
+
+        let connections = 'None';
+        if (connRes.length > 0) {
+          const row = connRes[0];
+          const rawOutgoing = Array.isArray(row) ? row[0] : row.outgoing || [];
+          const rawIncoming = Array.isArray(row) ? row[1] : row.incoming || [];
+          const outgoing = (rawOutgoing || []).filter((c: any) => c && c.name).slice(0, 5);
+          const incoming = (rawIncoming || []).filter((c: any) => c && c.name).slice(0, 5);
+
+          const fmt = (c: any, dir: 'out' | 'in') => {
+            const conf = c.confidence ? Math.round(c.confidence * 100) : 100;
+            return dir === 'out'
+              ? `-[${c.type} ${conf}%]-> ${c.name}`
+              : `<-[${c.type} ${conf}%]- ${c.name}`;
+          };
+          const outList = outgoing.map((c: any) => fmt(c, 'out'));
+          const inList = incoming.map((c: any) => fmt(c, 'in'));
+          if (outList.length || inList.length) {
+            connections = [...outList, ...inList].join(', ');
+          }
+        }
+
+        return [
+          `SYMBOL: ${nodeType} ${name}`,
+          `ID: ${nodeId}`,
+          `File: ${filePath || 'n/a'}`,
+          `Cluster: ${clusterLabel}${clusterDesc ? ` — ${clusterDesc}` : ''}`,
+          ``,
+          `PROCESSES:`,
+          ...(processLines.length > 0 ? processLines : ['- None found']),
+          ``,
+          `CONNECTIONS:`,
+          connections,
+        ].join('\n');
+      }
+
+      return `Unable to explore "${target}".`;
+    },
+    {
+      name: 'explore',
+      description: 'Deep dive on a symbol, cluster, or process. Shows membership, participation, and connections.',
+      schema: z.object({
+        target: z.string().describe('Name or ID of a symbol, cluster, or process'),
+        type: z.enum(['symbol', 'cluster', 'process']).optional().nullable().describe('Optional target type (auto-detected if omitted)'),
+      }),
+    },
+  );
+
+  const impactTool = tool(
+    async ({
+      target,
+      direction,
+      maxDepth,
+      relationTypes,
+      includeTests,
+      minConfidence,
+    }: {
+      target: string;
+      direction: 'upstream' | 'downstream';
+      maxDepth?: number;
+      relationTypes?: string[];
+      includeTests?: boolean;
+      minConfidence?: number;
+    }) => {
+      const depth = Math.min(maxDepth ?? 3, 10);
+      const showTests = includeTests ?? false;
+      const minConf = minConfidence ?? 0.7;
+
+      const isTestFile = (path: string): boolean => {
+        if (!path) return false;
+        const p = path.toLowerCase();
+        return (
+          p.includes('.test.') ||
+          p.includes('.spec.') ||
+          p.includes('__tests__') ||
+          p.includes('__mocks__') ||
+          p.endsWith('.test.ts') ||
+          p.endsWith('.test.tsx') ||
+          p.endsWith('.spec.ts') ||
+          p.endsWith('.spec.tsx')
+        );
+      };
+
+      const defaultRelTypes = ['CALLS', 'IMPORTS', 'EXTENDS', 'IMPLEMENTS'];
+      const activeRelTypes =
+        relationTypes && relationTypes.length > 0
+          ? relationTypes.filter((t) => validRelType(t))
+          : defaultRelTypes;
+      if (activeRelTypes.length === 0) {
+        return `No valid relation types provided. Valid types: ${(REL_TYPES as readonly string[]).join(', ')}`;
+      }
+      const relTypeFilter = activeRelTypes.map((t) => `'${t.replace(/'/g, "''")}'`).join(', ');
+
+      const directionLabel =
+        direction === 'upstream'
+          ? 'Files that DEPEND ON this (breakage risk)'
+          : 'Dependencies this RELIES ON';
+
+      const isPathQuery = target.includes('/');
+      const escapedTarget = target.replace(/'/g, "''");
+
+      const findTargetQuery = isPathQuery
+        ? `
+          MATCH (n) 
+          WHERE n.filePath IS NOT NULL AND n.filePath CONTAINS '${escapedTarget}'
+          RETURN n.id AS id, label(n) AS nodeType, n.filePath AS filePath
+          LIMIT 10
+        `
+        : `
+          MATCH (n) 
+          WHERE n.name = '${escapedTarget}'
+          RETURN n.id AS id, label(n) AS nodeType, n.filePath AS filePath
+          LIMIT 10
+        `;
+
+      let targetResults;
+      try {
+        targetResults = await executeQuery(findTargetQuery);
+      } catch (error) {
+        return `Error finding target "${target}": ${error}`;
+      }
+
+      if (!targetResults || targetResults.length === 0) {
+        return `Could not find "${target}" in the codebase. Try using the search tool first to find the exact name.`;
+      }
+
+      const allPaths = targetResults
+        .map((r: any) => (Array.isArray(r) ? r[2] : r.filePath))
+        .filter(Boolean);
+
+      if (targetResults.length > 1 && !target.includes('/')) {
+        return `AMBIGUOUS TARGET: Multiple files named "${target}" found:\n\n${allPaths.map((p: string, i: number) => `${i + 1}. ${p}`).join('\n')}\n\nPlease specify which file you mean by using a more specific path, e.g.:\n- impact("${allPaths[0].split('/').slice(-3).join('/')}")\n- impact("${allPaths[1]?.split('/').slice(-3).join('/') || allPaths[0]}")`;
+      }
+
+      let targetNode = targetResults[0];
+      if (target.includes('/') && targetResults.length > 1) {
+        const exactMatch = targetResults.find((r: any) => {
+          const path = Array.isArray(r) ? r[2] : r.filePath;
+          return path && path.toLowerCase().includes(target.toLowerCase());
+        });
+        if (exactMatch) {
+          targetNode = exactMatch;
+        } else {
+          return `AMBIGUOUS TARGET: Could not uniquely match "${target}". Found:\n\n${allPaths.map((p: string, i: number) => `${i + 1}. ${p}`).join('\n')}\n\nPlease use a more specific path.`;
+        }
+      }
+
+      const targetId = Array.isArray(targetNode) ? targetNode[0] : targetNode.id;
+      const targetType = Array.isArray(targetNode) ? targetNode[1] : targetNode.nodeType;
+      const targetFilePath = Array.isArray(targetNode) ? targetNode[2] : targetNode.filePath;
+
+      const multipleMatchWarning = '';
+
+      const isFileTarget = targetType === 'File';
+
+      const depthQueries: Promise<any[]>[] = [];
+
+      const d1Query =
+        direction === 'upstream'
+          ? isFileTarget
+            ? `
+            MATCH (affected)-[r:CodeRelation]->(callee)
+            WHERE callee.filePath = '${(targetFilePath || target).replace(/'/g, "''")}'
+              AND r.type IN [${relTypeFilter}]
+              AND affected.filePath <> callee.filePath
+              AND (r.confidence IS NULL OR r.confidence >= ${minConf})
+            RETURN DISTINCT 
+              affected.id AS id, 
+              affected.name AS name, 
+              label(affected) AS nodeType, 
+              affected.filePath AS filePath,
+              affected.startLine AS startLine,
+              1 AS depth,
+              r.type AS edgeType,
+              r.confidence AS confidence,
+              r.reason AS reason
+            LIMIT 300
+          `
+            : `
+            MATCH (target {id: '${targetId.replace(/'/g, "''")}'})
+            MATCH (affected)-[r:CodeRelation]->(target)
+            WHERE r.type IN [${relTypeFilter}]
+              AND (r.confidence IS NULL OR r.confidence >= ${minConf})
+            RETURN DISTINCT 
+              affected.id AS id, 
+              affected.name AS name, 
+              label(affected) AS nodeType, 
+              affected.filePath AS filePath,
+              affected.startLine AS startLine,
+              1 AS depth,
+              r.type AS edgeType,
+              r.confidence AS confidence,
+              r.reason AS reason
+            LIMIT 300
+          `
+          : isFileTarget
+            ? `
+            MATCH (caller)-[r:CodeRelation]->(affected)
+            WHERE caller.filePath = '${(targetFilePath || target).replace(/'/g, "''")}'
+              AND r.type IN [${relTypeFilter}]
+              AND caller.filePath <> affected.filePath
+              AND (r.confidence IS NULL OR r.confidence >= ${minConf})
+            RETURN DISTINCT 
+              affected.id AS id, 
+              affected.name AS name, 
+              label(affected) AS nodeType, 
+              affected.filePath AS filePath,
+              affected.startLine AS startLine,
+              1 AS depth,
+              r.type AS edgeType,
+              r.confidence AS confidence,
+              r.reason AS reason
+            LIMIT 300
+          `
+            : `
+            MATCH (target {id: '${targetId.replace(/'/g, "''")}'})
+            MATCH (target)-[r:CodeRelation]->(affected)
+            WHERE r.type IN [${relTypeFilter}]
+              AND (r.confidence IS NULL OR r.confidence >= ${minConf})
+            RETURN DISTINCT 
+              affected.id AS id, 
+              affected.name AS name, 
+              label(affected) AS nodeType, 
+              affected.filePath AS filePath,
+              affected.startLine AS startLine,
+              1 AS depth,
+              r.type AS edgeType,
+              r.confidence AS confidence,
+              r.reason AS reason
+            LIMIT 300
+          `;
+      depthQueries.push(
+        executeQuery(d1Query)
+          .then((results) => results)
+          .catch((err) => []),
+      );
+
+      if (depth >= 2) {
+        const d2Query =
+          direction === 'upstream'
+            ? `
+            MATCH (target {id: '${targetId.replace(/'/g, "''")}'})
+            MATCH (a)-[r1:CodeRelation]->(target)
+            MATCH (affected)-[r2:CodeRelation]->(a)
+            WHERE r1.type IN [${relTypeFilter}] AND r2.type IN [${relTypeFilter}]
+              AND affected.id <> target.id
+              AND (r1.confidence IS NULL OR r1.confidence >= ${minConf})
+              AND (r2.confidence IS NULL OR r2.confidence >= ${minConf})
+            RETURN DISTINCT 
+              affected.id AS id, 
+              affected.name AS name, 
+              label(affected) AS nodeType, 
+              affected.filePath AS filePath,
+              affected.startLine AS startLine,
+              2 AS depth,
+              r2.type AS edgeType,
+              r2.confidence AS confidence,
+              r2.reason AS reason
+            LIMIT 200
+          `
+            : `
+            MATCH (target {id: '${targetId.replace(/'/g, "''")}'})
+            MATCH (target)-[r1:CodeRelation]->(a)
+            MATCH (a)-[r2:CodeRelation]->(affected)
+            WHERE r1.type IN [${relTypeFilter}] AND r2.type IN [${relTypeFilter}]
+              AND affected.id <> target.id
+              AND (r1.confidence IS NULL OR r1.confidence >= ${minConf})
+              AND (r2.confidence IS NULL OR r2.confidence >= ${minConf})
+            RETURN DISTINCT 
+              affected.id AS id, 
+              affected.name AS name, 
+              label(affected) AS nodeType, 
+              affected.filePath AS filePath,
+              affected.startLine AS startLine,
+              2 AS depth,
+              r2.type AS edgeType,
+              r2.confidence AS confidence,
+              r2.reason AS reason
+            LIMIT 200
+          `;
+        depthQueries.push(
+          executeQuery(d2Query).catch((err) => []),
+        );
+      }
+
+      if (depth >= 3) {
+        const d3Query =
+          direction === 'upstream'
+            ? `
+            MATCH (target {id: '${targetId.replace(/'/g, "''")}'})
+            MATCH (a)-[r1:CodeRelation]->(target)
+            MATCH (b)-[r2:CodeRelation]->(a)
+            MATCH (affected)-[r3:CodeRelation]->(b)
+            WHERE r1.type IN [${relTypeFilter}] AND r2.type IN [${relTypeFilter}] AND r3.type IN [${relTypeFilter}]
+              AND affected.id <> target.id AND affected.id <> a.id
+              AND (r1.confidence IS NULL OR r1.confidence >= ${minConf})
+              AND (r2.confidence IS NULL OR r2.confidence >= ${minConf})
+              AND (r3.confidence IS NULL OR r3.confidence >= ${minConf})
+            RETURN DISTINCT 
+              affected.id AS id, 
+              affected.name AS name, 
+              label(affected) AS nodeType, 
+              affected.filePath AS filePath,
+              affected.startLine AS startLine,
+              3 AS depth,
+              r3.type AS edgeType,
+              r3.confidence AS confidence,
+              r3.reason AS reason
+            LIMIT 100
+          `
+            : `
+            MATCH (target {id: '${targetId.replace(/'/g, "''")}'})
+            MATCH (target)-[r1:CodeRelation]->(a)
+            MATCH (a)-[r2:CodeRelation]->(b)
+            MATCH (b)-[r3:CodeRelation]->(affected)
+            WHERE r1.type IN [${relTypeFilter}] AND r2.type IN [${relTypeFilter}] AND r3.type IN [${relTypeFilter}]
+              AND affected.id <> target.id AND affected.id <> a.id
+              AND (r1.confidence IS NULL OR r1.confidence >= ${minConf})
+              AND (r2.confidence IS NULL OR r2.confidence >= ${minConf})
+              AND (r3.confidence IS NULL OR r3.confidence >= ${minConf})
+            RETURN DISTINCT 
+              affected.id AS id, 
+              affected.name AS name, 
+              label(affected) AS nodeType, 
+              affected.filePath AS filePath,
+              affected.startLine AS startLine,
+              3 AS depth,
+              r3.type AS edgeType,
+              r3.confidence AS confidence,
+              r3.reason AS reason
+            LIMIT 100
+          `;
+        depthQueries.push(
+          executeQuery(d3Query).catch((err) => []),
+        );
+      }
+
+      const depthResults = await Promise.all(depthQueries);
+
+      interface NodeInfo {
+        id: string;
+        name: string;
+        nodeType: string;
+        filePath: string;
+        startLine?: number;
+        edgeType: string;
+        confidence: number;
+        reason: string;
+      }
+      const byDepth: Map<number, NodeInfo[]> = new Map();
+      const allNodeIds: string[] = [];
+      const seenIds = new Set<string>();
+
+      depthResults.forEach((results, idx) => {
+        const d = idx + 1;
+        results.forEach((row: any) => {
+          const nodeId = Array.isArray(row) ? row[0] : row.id;
+          const filePath = Array.isArray(row) ? row[3] : row.filePath;
+
+          if (!showTests && isTestFile(filePath)) return;
+
+          if (nodeId && !seenIds.has(nodeId)) {
+            seenIds.add(nodeId);
+            if (!byDepth.has(d)) byDepth.set(d, []);
+
+            const info: NodeInfo = {
+              id: nodeId,
+              name: Array.isArray(row) ? row[1] : row.name,
+              nodeType: Array.isArray(row) ? row[2] : row.nodeType,
+              filePath: filePath,
+              startLine: Array.isArray(row) ? row[4] : row.startLine,
+              edgeType: Array.isArray(row) ? row[5] : row.edgeType || 'CALLS',
+              confidence: Array.isArray(row) ? row[6] : (row.confidence ?? 1.0),
+              reason: Array.isArray(row) ? row[7] : row.reason || '',
+            };
+            byDepth.get(d)!.push(info);
+            allNodeIds.push(nodeId);
+          }
+        });
+      });
+
+      const totalAffected = allNodeIds.length;
+
+      if (totalAffected === 0) {
+        if (isFileTarget) {
+          const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const targetFileName = (targetFilePath || target).split('/').pop() || target;
+          const baseName = targetFileName.replace(/\.[^/.]+$/, '');
+          try {
+            const hints = await backendGrep(`\\b${escapeRegex(baseName)}\\b`, 15);
+            const filtered = hints.filter((h) => h.filePath !== targetFilePath);
+
+            if (filtered.length > 0) {
+              const formatted = filtered
+                .map((h) => `${h.filePath}:${h.line}: ${h.text}`)
+                .join('\n');
+              return `No ${direction} dependencies found for "${target}" (types: ${activeRelTypes.join(', ')}), but textual references were detected (graph may be incomplete):\n\n${formatted}${multipleMatchWarning}`;
+            }
+          } catch {
+          }
+        }
+
+        return `No ${direction} dependencies found for "${target}" (types: ${activeRelTypes.join(', ')}). This code appears to be ${direction === 'upstream' ? 'unused (not called by anything)' : 'self-contained (no outgoing dependencies)'}.${multipleMatchWarning}`;
+      }
+
+      const depth1 = byDepth.get(1) || [];
+      const depth2 = byDepth.get(2) || [];
+      const depth3 = byDepth.get(3) || [];
+
+      const confidenceBuckets = { high: 0, medium: 0, low: 0 };
+      for (const nodes of byDepth.values()) {
+        for (const n of nodes) {
+          const conf = n.confidence ?? 1;
+          if (conf >= 0.9) confidenceBuckets.high += 1;
+          else if (conf >= 0.8) confidenceBuckets.medium += 1;
+          else confidenceBuckets.low += 1;
+        }
+      }
+
+      const maxIdsForContext = 500;
+      const trimmedIds = allNodeIds.slice(0, maxIdsForContext);
+      const idList = trimmedIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(', ');
+      let affectedProcesses: Array<{
+        label: string;
+        hits: number;
+        minStep: number | null;
+        stepCount: number | null;
+      }> = [];
+      let affectedClusters: Array<{ label: string; hits: number; impact: string }> = [];
+
+      if (trimmedIds.length > 0) {
+        const processQuery = `
+          MATCH (s)-[r:CodeRelation {type: 'STEP_IN_PROCESS'}]->(p:Process)
+          WHERE s.id IN [${idList}]
+          RETURN p.label AS label, COUNT(DISTINCT s.id) AS hits, MIN(r.step) AS minStep, p.stepCount AS stepCount
+          ORDER BY hits DESC
+          LIMIT 20
+        `;
+        const clusterQuery = `
+          MATCH (s)-[:CodeRelation {type: 'MEMBER_OF'}]->(c:Community)
+          WHERE s.id IN [${idList}]
+          RETURN c.label AS label, COUNT(DISTINCT s.id) AS hits
+          ORDER BY hits DESC
+          LIMIT 20
+        `;
+        const directIdList = depth1.map((n) => `'${n.id.replace(/'/g, "''")}'`).join(', ');
+        const directClusterQuery =
+          depth1.length > 0
+            ? `
+          MATCH (s)-[:CodeRelation {type: 'MEMBER_OF'}]->(c:Community)
+          WHERE s.id IN [${directIdList}]
+          RETURN DISTINCT c.label AS label
+        `
+            : '';
+
+        const [processRes, clusterRes, directClusterRes] = await Promise.all([
+          executeQuery(processQuery),
+          executeQuery(clusterQuery),
+          directClusterQuery ? executeQuery(directClusterQuery) : Promise.resolve([]),
+        ]);
+
+        const directClusterSet = new Set<string>();
+        directClusterRes.forEach((row: any) => {
+          const label = Array.isArray(row) ? row[0] : row.label;
+          if (label) directClusterSet.add(label);
+        });
+
+        affectedProcesses = processRes.map((row: any) => ({
+          label: Array.isArray(row) ? row[0] : row.label,
+          hits: Array.isArray(row) ? row[1] : row.hits,
+          minStep: Array.isArray(row) ? row[2] : row.minStep,
+          stepCount: Array.isArray(row) ? row[3] : row.stepCount,
+        }));
+
+        affectedClusters = clusterRes.map((row: any) => {
+          const label = Array.isArray(row) ? row[0] : row.label;
+          const hits = Array.isArray(row) ? row[1] : row.hits;
+          const impact = directClusterSet.has(label) ? 'direct' : 'indirect';
+          return { label, hits, impact };
+        });
+      }
+
+      const directCount = depth1.length;
+      const processCount = affectedProcesses.length;
+      const clusterCount = affectedClusters.length;
+      let risk = 'LOW';
+      if (directCount >= 30 || processCount >= 5 || clusterCount >= 5 || totalAffected >= 200) {
+        risk = 'CRITICAL';
+      } else if (directCount >= 15 || processCount >= 3 || clusterCount >= 3 || totalAffected >= 100) {
+        risk = 'HIGH';
+      } else if (directCount >= 5 || totalAffected >= 30) {
+        risk = 'MEDIUM';
+      }
+
+      const lines: string[] = [
+        `IMPACT: ${target} | ${direction} | ${totalAffected} affected`,
+        `Confidence: High ${confidenceBuckets.high} | Medium ${confidenceBuckets.medium} | Low ${confidenceBuckets.low}`,
+        ``,
+        `AFFECTED PROCESSES:`,
+        ...(affectedProcesses.length > 0
+          ? affectedProcesses.map((p) => `- ${p.label} - BROKEN at step ${p.minStep ?? '?'} (${p.hits} symbols, ${p.stepCount ?? '?'} steps)`)
+          : ['- None found']),
+        ``,
+        `AFFECTED CLUSTERS:`,
+        ...(affectedClusters.length > 0
+          ? affectedClusters.map((c) => `- ${c.label} (${c.impact}, ${c.hits} symbols)`)
+          : ['- None found']),
+        ``,
+        `RISK: ${risk}`,
+        `- Direct callers: ${directCount}`,
+        `- Processes affected: ${processCount}`,
+        `- Clusters affected: ${clusterCount}`,
+        ``,
+      ];
+
+      const formatNode = (n: NodeInfo): string => {
+        const fileName = n.filePath?.split('/').pop() || '';
+        const loc = n.startLine ? `${fileName}:${n.startLine}` : fileName;
+        const confPct = Math.round((n.confidence ?? 1) * 100);
+        const fuzzyMarker = confPct < 80 ? '[fuzzy]' : '';
+        return `  ${n.nodeType}|${n.name}|${loc}|${n.edgeType}|${confPct}%${fuzzyMarker}`;
+      };
+
+      const getCallSiteSnippet = async (n: NodeInfo): Promise<string | null> => {
+        if (!n.filePath || !n.startLine) return null;
+        try {
+          const content = await readFile(n.filePath);
+          const lines = content.split('\n');
+          const lineIdx = n.startLine - 1;
+          if (lineIdx < 0 || lineIdx >= lines.length) return null;
+          let snippet = lines[lineIdx].trim();
+          if (snippet.length > 80) snippet = snippet.slice(0, 77) + '...';
+          return snippet;
+        } catch {
+          return null;
+        }
+      };
+
+      if (depth1.length > 0) {
+        const header = direction === 'upstream'
+          ? `d=1 (Directly DEPEND ON ${target}):`
+          : `d=1 (${target} USES these):`;
+        lines.push(header);
+        for (const n of depth1.slice(0, 15)) {
+          lines.push(formatNode(n));
+          const snippet = await getCallSiteSnippet(n);
+          if (snippet) lines.push(`    -> "${snippet}"`);
+        }
+        if (depth1.length > 15) lines.push(`  ... +${depth1.length - 15} more`);
+        lines.push(``);
+      }
+
+      if (depth2.length > 0) {
+        const header = direction === 'upstream'
+          ? `d=2 (Indirectly DEPEND ON ${target}):`
+          : `d=2 (${target} USES these indirectly):`;
+        lines.push(header);
+        depth2.slice(0, 15).forEach((n) => lines.push(formatNode(n)));
+        if (depth2.length > 15) lines.push(`  ... +${depth2.length - 15} more`);
+        lines.push(``);
+      }
+
+      if (depth3.length > 0) {
+        lines.push(`d=3 (Deep impact/dependency):`);
+        depth3.slice(0, 5).forEach((n) => lines.push(formatNode(n)));
+        if (depth3.length > 5) lines.push(`  ... +${depth3.length - 5} more`);
+        lines.push(``);
+      }
+
+      lines.push(`GRAPH ANALYSIS COMPLETE (trusted)`);
+      lines.push(`Optional: grep("${target}") for dynamic patterns`);
+      if (multipleMatchWarning) lines.push(multipleMatchWarning);
+      lines.push(``);
+
+      return lines.join('\n');
+    },
+    {
+      name: 'impact',
+      description: `Analyze the impact of changing a function, class, or file.
+
+Direction:
+- upstream: Find what CALLS/IMPORTS/EXTENDS this target (what would break)
+- downstream: Find what this target CALLS/IMPORTS/EXTENDS (dependencies)`,
+      schema: z.object({
+        target: z.string().describe('Name of the function, class, or file to analyze'),
+        direction: z.enum(['upstream', 'downstream']).describe('upstream = what depends on this; downstream = what this depends on'),
+        maxDepth: z.number().optional().nullable().describe('Max traversal depth (default: 3, max: 10)'),
+        relationTypes: z.array(z.string()).optional().nullable().describe('Filter by relation types'),
+        includeTests: z.boolean().optional().nullable().describe('Include test files in results (default: false)'),
+        minConfidence: z.number().optional().nullable().describe('Minimum edge confidence 0-1 (default: 0.7)'),
+      }),
+    },
+  );
+
+  return [searchTool, cypherTool, grepTool, readTool, overviewTool, exploreTool, impactTool];
+};
