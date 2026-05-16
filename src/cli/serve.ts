@@ -1,5 +1,6 @@
 import { createServer } from '../server/api.js';
-import { logger, flushLoggerSync } from '../core/logger.js';
+import { LoggerProviderRegistry } from '../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { cliError } from './cli-message.js';
 
 // Catch anything that would cause a silent exit. Pino v10's default
@@ -14,13 +15,13 @@ import { cliError } from './cli-message.js';
 // captures `type`, `message`, and `stack` as structured fields.
 process.on('uncaughtException', (err) => {
   logger.error({ err }, '[gitnexus serve] Uncaught exception');
-  flushLoggerSync();
-  process.exit(1);
-});
+    LoggerProviderRegistry.get().flush();
+    process.exit(1);
+  });
 process.on('unhandledRejection', (reason) => {
   const err = reason instanceof Error ? reason : new Error(String(reason));
   logger.error({ err }, '[gitnexus serve] Unhandled rejection');
-  flushLoggerSync();
+  LoggerProviderRegistry.get().flush();
   process.exit(1);
 });
 
@@ -53,7 +54,7 @@ export const serveCommand = async (options?: { port?: string; host?: string }) =
     if (err.stack && process.env.DEBUG) {
       logger.debug({ stack: err.stack }, 'serve start error stack');
     }
-    flushLoggerSync();
+    LoggerProviderRegistry.get().flush();
     process.exit(1);
   }
 };

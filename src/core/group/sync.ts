@@ -18,7 +18,8 @@ import { writeContractRegistry } from './storage.js';
 import { writeBridge } from './bridge-db.js';
 import type { ContractRegistry } from './types.js';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface SyncOptions {
   extractorOverride?:
     | ((repo: RepoHandle) => Promise<StoredContract[]>)

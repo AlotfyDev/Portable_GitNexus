@@ -15,7 +15,8 @@ import type { StructureOutput } from './structure.js';
 import { processCommunities, type CommunityDetectionResult } from '../community-processor.js';
 import { isDev } from '../utils/env.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface CommunitiesOutput {
   communityResult: CommunityDetectionResult;
 }

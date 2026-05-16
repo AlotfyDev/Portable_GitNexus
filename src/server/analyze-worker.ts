@@ -12,7 +12,8 @@
  */
 
 import { runFullAnalysis, type AnalyzeOptions, type AnalyzeResult } from '../core/run-analyze.js';
-import { closeLbug } from '../core/lbug/lbug-adapter.js';
+import { createDatabaseProvider } from '../core/config/database-config.js';
+const db = createDatabaseProvider();
 
 interface StartMessage {
   type: 'start';
@@ -58,7 +59,7 @@ process.on('unhandledRejection', (reason: any) => {
 process.on('SIGTERM', async () => {
   send({ type: 'error', message: 'Analysis cancelled (worker received SIGTERM)' });
   try {
-    await closeLbug();
+    await db.closeAll();
   } catch {}
   process.exit(0);
 });

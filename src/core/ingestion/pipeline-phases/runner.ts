@@ -15,7 +15,8 @@
 import type { PipelinePhase, PipelineContext, PhaseResult } from './types.js';
 import { isDev } from '../utils/env.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 /**
  * Validate that the phases form a valid dependency graph (no cycles, all deps present).
  * Returns phases in topological execution order.

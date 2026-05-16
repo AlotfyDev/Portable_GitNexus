@@ -11,12 +11,13 @@
 import type { PipelinePhase, PipelineContext, PhaseResult } from './types.js';
 import { getPhaseOutput } from './types.js';
 import type { ParseOutput } from './parse.js';
-import { generateId } from '../../../lib/utils.js';
+import { generateId } from '../utils/generate-id.js';
 import type { ExtractedORMQuery } from '../workers/parse-worker.js';
 import type { KnowledgeGraph } from '../../graph/types.js';
 import { isDev } from '../utils/env.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface ORMOutput {
   edgesCreated: number;
   modelCount: number;

@@ -109,7 +109,7 @@ export function emitPythonScopeCaptures(
       const anchorCap = grouped['@declaration.function']!;
       const fnNode = findNodeAtRange(tree.rootNode, anchorCap.range, 'function_definition');
       if (fnNode !== null) {
-        if (pythonFunctionDefinitionLabel(fnNode, 'Function') === 'Method') {
+        if (pythonFunctionDefinitionLabel(fnNode as any, 'Function') === 'Method') {
           delete grouped['@declaration.function'];
           grouped['@declaration.method'] = { ...anchorCap, name: '@declaration.method' };
         }

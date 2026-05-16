@@ -1,5 +1,5 @@
 import type { PipelineId, PipelineContract, PipelineContext } from './types.js';
-import type { IngestionOutput, LadybugStats, EmbeddingConfig, EmbeddingResult, EmbeddingCache, AnalysisMetadata, EmbeddingMode } from './stages.js';
+import type { IngestionOutput, LadybugStats, EmbeddingResult } from './stages.js';
 
 export const STAGE_IDS = {
   INGESTION: 'ingestion' as PipelineId,

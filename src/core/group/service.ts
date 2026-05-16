@@ -14,7 +14,8 @@ import {
 } from './group-path-utils.js';
 import { getDefaultGitnexusDir, getGroupDir, listGroups, readContractRegistry } from './storage.js';
 import { syncGroup } from './sync.js';
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import type {
   ContractRegistry,
   CrossLink,

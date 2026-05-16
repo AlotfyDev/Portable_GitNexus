@@ -1,7 +1,7 @@
 import { LRUCache } from 'lru-cache';
-import Parser from 'tree-sitter';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 /**
  * Minimal structural shape consumers need when reading Trees back
  * through a phase-dependency boundary. Declared here so phases that
@@ -20,8 +20,8 @@ export interface ASTCacheReader {
 
 // Define the interface for the Cache
 export interface ASTCache extends ASTCacheReader {
-  get: (filePath: string) => Parser.Tree | undefined;
-  set: (filePath: string, tree: Parser.Tree) => void;
+  get: (filePath: string) => unknown;
+  set: (filePath: string, tree: unknown) => void;
   clear: () => void;
   stats: () => { size: number; maxSize: number };
 }
@@ -30,7 +30,7 @@ export const createASTCache = (maxSize: number = 50): ASTCache => {
   const effectiveMax = Math.max(maxSize, 1);
   // Initialize the cache with a 'dispose' handler
   // This is the magic: When an item is evicted (dropped), this runs automatically.
-  const cache = new LRUCache<string, Parser.Tree>({
+  const cache = new LRUCache<string, unknown>({
     max: effectiveMax,
     dispose: (tree) => {
       try {
@@ -61,7 +61,7 @@ export const createASTCache = (maxSize: number = 50): ASTCache => {
       return tree; // Returns undefined if not found
     },
 
-    set: (filePath: string, tree: Parser.Tree) => {
+    set: (filePath: string, tree: unknown) => {
       cache.set(filePath, tree);
     },
 

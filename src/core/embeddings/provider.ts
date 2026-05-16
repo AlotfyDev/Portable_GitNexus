@@ -2,8 +2,11 @@ import { env } from '@huggingface/transformers';
 import { existsSync } from 'fs';
 import { basename } from 'path';
 import { DEFAULT_EMBEDDING_CONFIG, type EmbeddingConfig } from './types.js';
+import type { ModelRegistry } from './ModelRegistry.js';
+import { DefaultModelRegistry } from './DefaultModelRegistry.js';
 import { getPortability } from '../portability/index.js';
-import { loadPortableConfig, resolveConfigPath } from '../../config/portable-config.js';
+import { resolveConfigPath } from '../../config/portable-config.js';
+import { ConfigProviderRegistry } from '../config/registry.js';
 
 export type ProviderRequirement =
   | 'wasm-backend'
@@ -37,12 +40,19 @@ function isBunRuntime(): boolean {
 
 class WasmPortableProvider implements EmbeddingProvider {
   readonly name = 'wasm-portable';
-  readonly modelId = 'intfloat/multilingual-e5-small';
-  readonly dimensions = 384;
+
+  get modelId(): string {
+    return this.registry.getDefault().hubModelId ?? DEFAULT_EMBEDDING_CONFIG.modelId;
+  }
+
+  get dimensions(): number {
+    return this.registry.getDefault().dimensions;
+  }
 
   constructor(
     private readonly wasmDir: string,
     private readonly modelsDir: string,
+    private readonly registry: ModelRegistry,
   ) {}
 
   configureEnv(): void {
@@ -85,10 +95,19 @@ class WasmPortableProvider implements EmbeddingProvider {
 
 class CpuPortableProvider implements EmbeddingProvider {
   readonly name = 'cpu-portable';
-  readonly modelId = 'intfloat/multilingual-e5-small';
-  readonly dimensions = 384;
 
-  constructor(private readonly modelsDir: string) {}
+  get modelId(): string {
+    return this.registry.getDefault().hubModelId ?? DEFAULT_EMBEDDING_CONFIG.modelId;
+  }
+
+  get dimensions(): number {
+    return this.registry.getDefault().dimensions;
+  }
+
+  constructor(
+    private readonly modelsDir: string,
+    private readonly registry: ModelRegistry,
+  ) {}
 
   configureEnv(): void {
     env.allowRemoteModels = false;
@@ -124,10 +143,19 @@ class CpuPortableProvider implements EmbeddingProvider {
 
 class NativeNodeProvider implements EmbeddingProvider {
   readonly name = 'native-node';
-  readonly modelId = DEFAULT_EMBEDDING_CONFIG.modelId;
-  readonly dimensions = DEFAULT_EMBEDDING_CONFIG.dimensions;
 
-  constructor(private readonly modelsDir: string) {}
+  get modelId(): string {
+    return this.registry.getDefault().hubModelId ?? DEFAULT_EMBEDDING_CONFIG.modelId;
+  }
+
+  get dimensions(): number {
+    return this.registry.getDefault().dimensions;
+  }
+
+  constructor(
+    private readonly modelsDir: string,
+    private readonly registry: ModelRegistry,
+  ) {}
 
   configureEnv(): void {
     if (existsSync(this.modelsDir)) {
@@ -161,8 +189,8 @@ class NativeNodeProvider implements EmbeddingProvider {
 
 // ── Provider Registry ────────────────────────────────────────────────────
 
-function createProviders(): EmbeddingProvider[] {
-  const config = loadPortableConfig();
+function createProviders(registry: ModelRegistry): EmbeddingProvider[] {
+  const config = ConfigProviderRegistry.get().getConfig();
   const portable = getPortability();
   const baseDir = portable.isPortable ? portable.appDir : process.cwd();
 
@@ -170,31 +198,34 @@ function createProviders(): EmbeddingProvider[] {
     new WasmPortableProvider(
       resolveConfigPath(config.embeddings.onnxruntime_dir, baseDir),
       resolveConfigPath(config.embeddings.model_dir, baseDir),
+      registry,
     ),
     new CpuPortableProvider(
       resolveConfigPath(config.embeddings.model_dir, baseDir),
+      registry,
     ),
     new NativeNodeProvider(
       resolveConfigPath(config.embeddings.model_dir, baseDir),
+      registry,
     ),
   ];
 }
 
-const providers = createProviders();
-
-export function selectProvider(): EmbeddingProvider {
+function selectBestProvider(providersList: EmbeddingProvider[]): EmbeddingProvider {
   const override = process.env.GITNEXUS_EMBEDDING_PROVIDER;
   if (override) {
-    const found = providers.find((p) => p.name === override);
+    const found = providersList.find((p) => p.name === override);
     if (found) return found;
   }
   // Portable: bun binary → index 0 (wasm), Node.js → index 1 (cpu)
   if (getPortability().isPortable) {
-    return isBunRuntime() ? providers[0] : providers[1];
+    return isBunRuntime() ? providersList[0] : providersList[1];
   }
-  return providers[2];
+  return providersList[2];
 }
 
-export function getAvailableProviders(): string[] {
-  return providers.map((p) => p.name);
+export function selectProvider(registry: ModelRegistry = new DefaultModelRegistry()): EmbeddingProvider {
+  return selectBestProvider(createProviders(registry));
 }
+
+

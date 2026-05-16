@@ -3,11 +3,6 @@ import type { PipelineContract, CachePayload } from '../types.js';
 import type { EmbeddingResult } from '../stages.js';
 import { STAGE_IDS, STAGE_RESOURCES } from '../descriptors.js';
 import { pid } from '../types.js';
-import {
-  getLbugStats,
-  executeQuery,
-  executeWithReusedStatement,
-} from '../../lbug/lbug-adapter.js';
 import { STALE_HASH_SENTINEL } from '../../lbug/schema.js';
 import {
   deriveEmbeddingMode,
@@ -20,12 +15,14 @@ import { isHttpMode } from '../../embeddings/http-client.js';
 import { runEmbeddingPipeline } from '../../embeddings/embedding-pipeline.js';
 import { readServerMapping } from '../../embeddings/server-mapping.js';
 import { loadEmbeddingCache } from '../../embeddings/cache-loader.js';
-import { initLbug, closeLbug } from '../../lbug/lbug-adapter.js';
+import { createDatabaseProvider } from '../../config/database-config.js';
 import { loadMeta } from '../../../storage/repo-manager.js';
 import {
   getInferredRepoName,
   resolveRepoIdentityRoot,
 } from '../../../storage/git.js';
+
+const db = createDatabaseProvider();
 
 interface StageCacheData {
   cachedEmbeddings: CachedEmbedding[];
@@ -67,12 +64,15 @@ export function createEmbeddingStage(): PipelineContract<EmbeddingResult> {
       const mode = deriveEmbeddingMode(ctx.options, existingCount as number);
 
       if (mode.shouldLoadCache && meta) {
+        const repoName = ctx.options.registryName ??
+          getInferredRepoName(ctx.repoPath) ??
+          path.basename(resolveRepoIdentityRoot(ctx.repoPath));
         const result = await loadEmbeddingCache(
           ctx.lbugPath,
           true,
           true,
-          initLbug,
-          closeLbug,
+          (dbPath: string) => db.initialize(repoName, { connection: dbPath }),
+          () => db.closeAll(),
           (msg: string) => ctx.log(msg),
           ctx.progress,
         );
@@ -83,7 +83,10 @@ export function createEmbeddingStage(): PipelineContract<EmbeddingResult> {
       return { type: 'none' };
     },
     run: async (ctx) => {
-      const stats = await getLbugStats();
+      const repoName = ctx.options.registryName ??
+        getInferredRepoName(ctx.repoPath) ??
+        path.basename(resolveRepoIdentityRoot(ctx.repoPath));
+      const stats = await db.getStats(repoName);
       ctx.log(`[embedding] stats.nodes=${stats.nodes}`);
 
       const meta = await loadMeta(ctx.storagePath);
@@ -116,8 +119,9 @@ export function createEmbeddingStage(): PipelineContract<EmbeddingResult> {
             );
           }
 
+          const runQuery = (cypher: string) => db.executeQuery(repoName, cypher);
           await logPerLabelNodeCounts(
-            executeQuery,
+            runQuery,
             (msg: string) => ctx.log(msg),
           );
 
@@ -147,9 +151,11 @@ export function createEmbeddingStage(): PipelineContract<EmbeddingResult> {
             path.basename(resolveRepoIdentityRoot(ctx.repoPath));
           const serverName = await readServerMapping(projectName);
 
+          const batchWrite = (cypher: string, paramsList: Array<Record<string, any>>) =>
+            db.executeBatch(repoName, cypher, paramsList);
           const embeddingResult = await runEmbeddingPipeline(
-            executeQuery,
-            executeWithReusedStatement,
+            runQuery,
+            batchWrite,
             (p) => {
               const scaled = 90 + Math.round((p.percent / 100) * 8);
               const label =

@@ -42,7 +42,8 @@ import {
 } from '../lbug/repository/embedding-repository.js';
 import { getExactScanLimit } from '../platform/capabilities.js';
 import { createEmbeddingRepository } from '../vector-store/registry.js';
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 const isDev = process.env.NODE_ENV === 'development';
 

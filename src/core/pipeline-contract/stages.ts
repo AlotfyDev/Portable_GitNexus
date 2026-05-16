@@ -1,5 +1,6 @@
 import type { PipelineId, PipelineContract, PipelineContext } from './types.js';
 
+// Planned for future GPU support — currently only 'cpu' is implemented
 export type Device = 'wasm' | 'cpu' | 'cuda' | 'dml' | 'remote';
 
 export interface IngestionOutput {
@@ -14,34 +15,9 @@ export interface LadybugStats {
   processes?: number;
 }
 
-export interface EmbeddingConfig {
-  modelId: string;
-  dimensions: number;
-  modelDir: string;
-  backend: Device;
-  allowRemoteModels: boolean;
-  allowLocalModels: boolean;
-}
-
 export interface EmbeddingResult {
   semanticMode: 'vector-index' | 'exact-scan' | undefined;
   embeddingsCount: number;
 }
 
-export interface EmbeddingCache {
-  embeddings: unknown[];
-  nodeIds: Set<string>;
-}
 
-export interface AnalysisMetadata {
-  repoPath: string;
-  repoName: string;
-  stats: LadybugStats & { files?: number; embeddings?: number };
-  pipelineResult: IngestionOutput | undefined;
-  alreadyUpToDate: boolean;
-}
-
-export interface EmbeddingMode {
-  shouldGenerateEmbeddings: boolean;
-  shouldPreserveCache: boolean;
-}

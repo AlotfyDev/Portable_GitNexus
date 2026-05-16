@@ -1,4 +1,5 @@
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { CircuitOpenError, ResilientFetchExhaustedError, resilientFetch } from 'gitnexus-shared';
 /**
  * LLM Client for Wiki Generation

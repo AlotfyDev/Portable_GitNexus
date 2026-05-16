@@ -1,6 +1,7 @@
 // gitnexus/src/cli/group.ts
 import type { Command } from 'commander';
-import { logger } from '../core/logger.js';
+import { LoggerProviderRegistry } from '../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import yaml from 'js-yaml';
 
 export function registerGroupCommands(program: Command): void {

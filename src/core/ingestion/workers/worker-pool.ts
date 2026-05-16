@@ -3,7 +3,8 @@ import os from 'node:os';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface WorkerPool {
   /**
    * Dispatch items across workers. Items are split into bounded jobs, each job

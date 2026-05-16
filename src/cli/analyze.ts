@@ -24,8 +24,7 @@ import { getGitRoot, hasGitDir } from '../storage/git.js';
 import { runFullAnalysis } from '../core/run-analyze.js';
 import { getMaxFileSizeBannerMessage } from '../core/ingestion/utils/max-file-size.js';
 import { warnMissingOptionalGrammars } from './optional-grammars.js';
-import { loadPortableConfig } from '../config/portable-config.js';
-import type { PortableConfig } from '../config/types.js';
+import { ConfigProviderRegistry } from '../core/config/registry.js';
 import { glob } from 'glob';
 import fs from 'fs/promises';
 import { cliError } from './cli-message.js';
@@ -250,10 +249,7 @@ export const analyzeCommand = async (inputPath?: string, options?: AnalyzeOption
   }
 
   // Load portable config if available (no-op in dev mode)
-  const config: PortableConfig | undefined = loadPortableConfig();
-  const effectiveConfig = options?.outputPath
-    ? { ...config, output_path: options.outputPath }
-    : config;
+  const config = ConfigProviderRegistry.get().getConfig();
 
   console.log('\n  GitNexus Analyzer\n');
 
@@ -443,7 +439,6 @@ export const analyzeCommand = async (inputPath?: string, options?: AnalyzeOption
         },
         onLog: barLog,
       },
-      effectiveConfig,
     );
 
     if (result.alreadyUpToDate) {

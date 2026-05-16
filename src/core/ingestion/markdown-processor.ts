@@ -7,7 +7,7 @@
  */
 
 import path from 'node:path';
-import { generateId } from '../../lib/utils.js';
+import { generateId } from './utils/generate-id.js';
 import type { GraphNode } from 'gitnexus-shared';
 import { KnowledgeGraph } from '../graph/types.js';
 

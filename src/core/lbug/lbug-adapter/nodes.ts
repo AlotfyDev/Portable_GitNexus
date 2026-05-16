@@ -7,7 +7,8 @@ import {
   type LbugConnectionHandle,
 } from '../lbug-config.js';
 import lbug from '@ladybugdb/core';
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 export const insertNodeToLbug = async (
   label: string,

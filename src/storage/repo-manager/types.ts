@@ -11,6 +11,16 @@ export interface RepoMeta {
     processes?: number;
     embeddings?: number;
   };
+
+  /** Optional: declared capabilities from the PortabilityContract */
+  capabilities?: string[];
+
+  /** Artifact freshness chain for incremental analysis */
+  artifacts?: Record<string, {
+    fingerprint: string;
+    timestamp: number;
+    size?: number;
+  }>;
 }
 
 export interface IndexedRepo {

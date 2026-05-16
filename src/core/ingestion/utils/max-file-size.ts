@@ -1,6 +1,7 @@
 import { TREE_SITTER_MAX_BUFFER } from '../constants.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 /** Default threshold (512 KB). Files larger than this are skipped by the walker. */
 export const DEFAULT_MAX_FILE_SIZE_BYTES = 512 * 1024;
 

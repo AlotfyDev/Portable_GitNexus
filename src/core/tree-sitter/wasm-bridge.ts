@@ -1,6 +1,7 @@
 import { Parser, Language } from 'web-tree-sitter';
 import { SupportedLanguages } from 'gitnexus-shared';
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { grammarWasm, runtimeWasm } from './wasm/index.js';
@@ -158,45 +159,6 @@ export function isWasmGrammarAvailable(languageKey: string): boolean {
   return WASM_GRAMMARS[wasmFile] != null;
 }
 
-/**
- * List all available WASM grammar keys.
- *
- * @returns Array of language keys that have a WASM grammar mapping
- */
-export function getAvailableWasmGrammars(): string[] {
-  return Object.keys(LANGUAGE_WASM_MAP);
-}
-
 // ── Parser creation ────────────────────────────────────────────────────────
 
-/**
- * Create a Parser for the given language.
- * Loads the grammar if needed.
- *
- * @param languageKey - Key from `LANGUAGE_WASM_MAP`
- * @returns A configured `Parser` instance with the language set
- * @throws If the grammar cannot be loaded
- */
-export async function createWasmParser(languageKey: string): Promise<Parser> {
-  const language = await loadWasmGrammar(languageKey);
-  if (!language) {
-    throw new Error(
-      `Failed to load WASM grammar for language key: ${languageKey}`,
-    );
-  }
-  const parser = new Parser();
-  parser.setLanguage(language);
-  return parser;
-}
 
-/**
- * Get a shared Parser instance (singleton).
- * The returned parser has no language set — call `parser.setLanguage()` before parsing.
- */
-export async function getSharedParser(): Promise<Parser> {
-  await initWasmRuntime();
-  if (!sharedParser) {
-    sharedParser = new Parser();
-  }
-  return sharedParser;
-}

@@ -1,12 +1,13 @@
+import path from 'path';
 import fs from 'fs/promises';
 import type { PipelineContract } from '../types.js';
 import { STAGE_IDS, STAGE_RESOURCES } from '../descriptors.js';
 import { pid } from '../types.js';
-import {
-  initLbug,
-  closeLbug,
-  loadGraphToLbug,
-} from '../../lbug/lbug-adapter.js';
+import { loadGraphToLbug } from '../../lbug/lbug-adapter/graph-loader.js';
+import { createDatabaseProvider } from '../../config/database-config.js';
+import { getInferredRepoName, resolveRepoIdentityRoot } from '../../../storage/git.js';
+
+const db = createDatabaseProvider();
 
 export function createLadybugStage(): PipelineContract<void> {
   return {
@@ -32,7 +33,7 @@ export function createLadybugStage(): PipelineContract<void> {
         | undefined;
       if (!ingestion) throw new Error('LadybugDB stage requires ingestion results');
 
-      await closeLbug();
+      await db.closeAll();
       const lbugFiles = [ctx.lbugPath, `${ctx.lbugPath}.wal`, `${ctx.lbugPath}.lock`];
       for (const f of lbugFiles) {
         try {
@@ -42,7 +43,11 @@ export function createLadybugStage(): PipelineContract<void> {
         }
       }
 
-      await initLbug(ctx.lbugPath);
+      const repoName = ctx.options.registryName ??
+        getInferredRepoName(ctx.repoPath) ??
+        path.basename(resolveRepoIdentityRoot(ctx.repoPath));
+
+      await db.initialize(repoName, { connection: ctx.lbugPath });
       let lbugMsgCount = 0;
       await loadGraphToLbug(
         ingestion.graph as any,

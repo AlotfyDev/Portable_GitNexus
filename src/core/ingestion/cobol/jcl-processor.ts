@@ -18,7 +18,7 @@
 
 import { parseJcl, type JclParseResults } from './jcl-parser.js';
 import type { KnowledgeGraph } from '../../graph/types.js';
-import { generateId } from '../../../lib/utils.js';
+import { generateId } from '../utils/generate-id.js';
 
 export interface JclProcessResult {
   jobCount: number;

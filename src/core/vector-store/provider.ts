@@ -1,4 +1,4 @@
-import type { VectorStoreCapabilities, VectorRecord, SearchResult, SearchOptions, VectorStoreStats } from './types.js';
+import type { VectorStoreCapabilities, VectorRecord, SearchResult, SearchOptions } from './types.js';
 
 /**
  * IVecDBProvider

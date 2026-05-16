@@ -1,7 +1,8 @@
 import type { ContractType, CrossLink, GroupManifestLink, StoredContract } from '../types.js';
 import type { CypherExecutor } from '../contract-extractor.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface ManifestExtractResult {
   contracts: StoredContract[];
   crossLinks: CrossLink[];

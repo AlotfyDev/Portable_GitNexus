@@ -2,7 +2,7 @@ import type { KnowledgeGraph } from '../../../graph/types.js';
 import type { ExtractedRoute, ExtractedFetchCall } from '../../workers/parse-worker.js';
 import type { ResolutionContext } from '../../model/resolution-context.js';
 import { TIER_CONFIDENCE } from '../../model/resolution-context.js';
-import { generateId } from '../../../../lib/utils.js';
+import { generateId } from '../../utils/generate-id.js';
 import { normalizeFetchURL, routeMatches } from '../../route-extractors/nextjs.js';
 import { RESPONSE_ACCESS_BLOCKLIST } from '../constants.js';
 import { yieldToEventLoop } from '../../utils/event-loop.js';

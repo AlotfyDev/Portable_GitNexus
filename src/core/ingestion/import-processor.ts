@@ -4,7 +4,7 @@ import Parser from 'tree-sitter';
 import { isLanguageAvailable, loadParser, loadLanguage } from '../tree-sitter/parser-loader.js';
 import { getProvider, getProviderForFile, providersWithImplicitWiring } from './languages/index.js';
 import type { LanguageProvider } from './language-provider.js';
-import { generateId } from '../../lib/utils.js';
+import { generateId } from './utils/generate-id.js';
 import { getLanguageFromFilename } from 'gitnexus-shared';
 import { isVerboseIngestionEnabled } from './utils/verbose.js';
 import { yieldToEventLoop } from './utils/event-loop.js';
@@ -27,7 +27,8 @@ import type { SyntaxNode } from './utils/ast-helpers.js';
 import { isDev } from './utils/env.js';
 import { isRegistryPrimary } from './registry-primary-flag.js';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 // Type: Map<FilePath, Set<ResolvedFilePath>>
 // Stores all files that a given file imports from
 export type ImportMap = Map<string, Set<string>>;
@@ -321,7 +322,7 @@ export const processImports = async (
     try {
       const lang = parser.language;
       query = new Parser.Query(lang, queryStr);
-      matches = query.matches(tree.rootNode);
+      matches = query.matches((tree as any).rootNode);
     } catch (queryError: any) {
       if (isDev) {
         logger.error(
@@ -331,8 +332,8 @@ export const processImports = async (
             err: queryError?.message || queryError,
             queryPreview: queryStr.substring(0, 200) + '...',
             contentPreview: file.content.substring(0, 300),
-            astRootType: tree.rootNode?.type,
-            astHasError: tree.rootNode?.hasError,
+            astRootType: (tree as any).rootNode?.type,
+            astHasError: (tree as any).rootNode?.hasError,
           },
           'tree-sitter query error',
         );

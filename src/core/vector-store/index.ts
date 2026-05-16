@@ -4,5 +4,4 @@ export type {
   VectorRecord,
   SearchResult,
   SearchOptions,
-  VectorStoreStats,
 } from './types.js';

@@ -36,7 +36,7 @@ import {
   createEmbeddingStage,
   createFinalizeStage,
 } from './pipeline-contract/index.js';
-import type { PortableConfig } from '../config/types.js';
+import { ConfigProviderRegistry } from './config/registry.js';
 import { resolve as resolvePath } from 'path';
 
 export type { AnalyzeOptions, AnalyzeResult, AnalyzeCallbacks } from './analyze/types.js';
@@ -46,15 +46,15 @@ export async function runFullAnalysis(
   repoPath: string,
   options: import('./analyze/types.js').AnalyzeOptions,
   callbacks: import('./analyze/types.js').AnalyzeCallbacks,
-  portableConfig?: PortableConfig,
 ): Promise<import('./analyze/types.js').AnalyzeResult> {
   const log = (msg: string) => callbacks.onLog?.(msg);
   const progress = (phase: string, percent: number, message: string) =>
     callbacks.onProgress(phase, percent, message);
 
   // Allow config output_path to override where .gitnexus/ lives
-  const effectiveStoragePath = portableConfig?.output_path
-    ? resolvePath(repoPath, portableConfig.output_path)
+  const config = ConfigProviderRegistry.get().getConfig();
+  const effectiveStoragePath = config?.output_path
+    ? resolvePath(repoPath, config.output_path)
     : undefined;
   const { storagePath, lbugPath } = effectiveStoragePath
     ? { storagePath: effectiveStoragePath, lbugPath: path.join(effectiveStoragePath, 'lbug') }
@@ -98,7 +98,7 @@ export async function runFullAnalysis(
     callbacks,
     results: new Map(),
     tempDir: path.join(storagePath, '.temp'),
-    config: portableConfig,
+    config: ConfigProviderRegistry.get(),
     log: (msg: string) => callbacks.onLog?.(msg),
     progress: (phase: string, percent: number, message: string) =>
       callbacks.onProgress(phase, percent, message),

@@ -3,7 +3,7 @@ import type { ExtractedCall, FileConstructorBindings } from '../workers/parse-wo
 import type { ResolutionContext } from '../model/resolution-context.js';
 import type { HeritageMap } from '../model/index.js';
 import type { BindingAccumulator } from '../binding-accumulator.js';
-import { generateId } from '../../../lib/utils.js';
+import { generateId } from '../utils/generate-id.js';
 import { getLanguageFromFilename } from 'gitnexus-shared';
 import { isRegistryPrimary } from '../registry-primary-flag.js';
 import { yieldToEventLoop } from '../utils/event-loop.js';

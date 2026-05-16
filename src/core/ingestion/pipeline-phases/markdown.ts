@@ -15,7 +15,8 @@ import { readFileContents } from '../filesystem-walker.js';
 import type { StructureOutput } from './structure.js';
 import { isDev } from '../utils/env.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface MarkdownOutput {
   /** Number of markdown sections extracted. */
   sections: number;

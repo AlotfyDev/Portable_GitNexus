@@ -3,7 +3,8 @@ import type { SymbolTableWriter } from '../model/index.js';
 import { ASTCache } from '../ast-cache.js';
 import type { FileProgressCallback, WorkerExtractedData } from './types.js';
 import type { WorkerPool } from '../workers/worker-pool.js';
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { processParsingWithWorkers } from './helpers/worker-dispatch.js';
 import { processParsingSequential } from './helpers/sequential.js';
 

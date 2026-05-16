@@ -1,6 +1,6 @@
 import { parentPort } from 'node:worker_threads';
-import { Parser, Query, Tree } from 'web-tree-sitter';
-import { loadParser } from '../../../tree-sitter/parser-loader.js';
+import { ParserProviderRegistry } from '../../../tree-sitter/ParserProviderRegistry.js';
+import type { ParseResult } from '../../../tree-sitter/index.js';
 import { SupportedLanguages, getLanguageFromFilename, type NodeLabel, type ParsedFile } from 'gitnexus-shared';
 import { getProvider } from '../../languages/index.js';
 import {
@@ -18,7 +18,7 @@ import {
 import { extractCallArgTypes } from '../../utils/call-analysis.js';
 import { buildTypeEnv } from '../../type-env.js';
 import { detectFrameworkFromAST } from '../../framework-detection.js';
-import { generateId } from '../../../../lib/utils.js';
+import { generateId } from '../../utils/generate-id.js';
 import { preprocessImportPath } from '../../import-processor.js';
 import {
   extractVueScript,
@@ -37,7 +37,8 @@ import {
 } from '../../utils/method-props.js';
 import type { LanguageProvider } from '../../language-provider.js';
 import { extractParsedFile } from '../../scope-extractor-bridge.js';
-import { logger } from '../../../logger.js';
+import { LoggerProviderRegistry } from '../../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import type { SymbolTableReader } from '../../model/symbol-table.js';
 import type { ParseWorkerInput, ParseWorkerResult } from './types.js';
 import {
@@ -68,6 +69,8 @@ const NOOP_SYMBOL_TABLE: SymbolTableReader = {
   getStats: () => ({ fileCount: 0 }),
 };
 
+const parserProvider = ParserProviderRegistry.get();
+
 export const processFileGroup = async (
   files: ParseWorkerInput[],
   language: SupportedLanguages,
@@ -75,11 +78,9 @@ export const processFileGroup = async (
   result: ParseWorkerResult,
   onFileProcessed?: () => void,
 ): Promise<void> => {
-  const parser = await loadParser();
-  let query: Query;
+  let query;
   try {
-    const lang = parser.language;
-    query = new Query(lang, queryString);
+    query = parserProvider.createQuery(language, queryString);
   } catch (err) {
     const message = `Query compilation failed for ${language}: ${err instanceof Error ? err.message : String(err)}`;
     if (parentPort) {
@@ -109,9 +110,9 @@ export const processFileGroup = async (
 
     clearCaches();
 
-    let tree;
+    let parseResult: ParseResult;
     try {
-      tree = parser.parse(parseContent, undefined);
+      parseResult = await parserProvider.parse(parseContent, language);
     } catch (err) {
       logger.warn(
         `Failed to parse file ${file.path}: ${err instanceof Error ? err.message : String(err)}`,
@@ -124,7 +125,7 @@ export const processFileGroup = async (
 
     let matches;
     try {
-      matches = query.matches(tree.rootNode);
+      matches = query.matches(parseResult.rootNode);
     } catch (err) {
       logger.warn(
         `Query execution failed for ${file.path}: ${err instanceof Error ? err.message : String(err)}`,
@@ -142,7 +143,7 @@ export const processFileGroup = async (
         if (parentPort) parentPort.postMessage({ type: 'warning', message });
         else logger.warn(message);
       },
-      tree,
+      parseResult.internal,
     );
     if (parsedFile !== undefined) result.parsedFiles.push(parsedFile);
 
@@ -173,7 +174,7 @@ export const processFileGroup = async (
     }
 
     const parentMap: ReadonlyMap<string, readonly string[]> = fileParentMap;
-    const typeEnv = buildTypeEnv(tree, language, {
+    const typeEnv = buildTypeEnv(parseResult.internal as any, language, {
       parentMap,
       enclosingFunctionFinder: provider?.enclosingFunctionFinder,
       extractFunctionName: provider?.methodExtractor?.extractFunctionName,
@@ -903,7 +904,7 @@ export const processFileGroup = async (
     }
 
     if (provider.isRouteFile?.(file.path)) {
-      const extractedRoutes = extractLaravelRoutes(tree, file.path);
+      const extractedRoutes = extractLaravelRoutes(parseResult.internal as any, file.path);
       for (const r of extractedRoutes) result.routes.push(r);
     }
 

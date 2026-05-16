@@ -41,7 +41,8 @@ import { emitImportEdges } from '../graph-bridge/imports-to-edges.js';
 import type { ScopeResolver } from '../contract/scope-resolver.js';
 import { buildWorkspaceResolutionIndex } from '../workspace-index.js';
 
-import { logger } from '../../../logger.js';
+import { LoggerProviderRegistry } from '../../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 interface RunScopeResolutionInput {
   readonly graph: KnowledgeGraph;
   /**

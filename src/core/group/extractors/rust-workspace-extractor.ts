@@ -5,7 +5,8 @@ import type { GroupManifestLink, ContractRole } from '../types.js';
 import { shouldIgnorePath } from '../../../config/ignore-service.js';
 import { loadIgnoreRules } from '../../../config/ignore-service.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 /**
  * Discover cross-crate contracts in a Rust workspace by reading each
  * member's `Cargo.toml` dependencies and scanning source files for

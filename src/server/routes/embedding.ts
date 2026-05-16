@@ -3,8 +3,8 @@ import type { ServerDependencies } from '../types.js';
 import { createRepoResolver, requestedRepo, createRepoLockManager } from '../middleware/repo-resolver.js';
 import { createRouteLimiter } from '../validation.js';
 import { mountSSEProgress } from '../streaming.js';
-import { withLbugDb, executeQuery, executeWithReusedStatement, flushWAL } from '../../core/lbug/lbug-adapter.js';
-import path from 'path';
+import { createDatabaseProvider } from '../../core/config/database-config.js';
+const db = createDatabaseProvider();
 
 export function mountEmbedding(router: Router, deps: ServerDependencies): void {
   const resolveRepo = createRepoResolver(deps.backend, deps.jobManager, deps.config.repoHoldTimeoutMs);
@@ -46,47 +46,48 @@ export function mountEmbedding(router: Router, deps: ServerDependencies): void {
 
       (async () => {
         try {
-          const lbugPath = path.join(entry.storagePath, 'lbug');
-          await withLbugDb(lbugPath, async () => {
-            const { runEmbeddingPipeline } =
-              await import('../../core/embeddings/embedding-pipeline.js');
-            const { fetchExistingEmbeddingHashes } = await import('../../core/lbug/lbug-adapter.js');
-            const existingEmbeddings = await fetchExistingEmbeddingHashes(executeQuery);
-            if (existingEmbeddings && existingEmbeddings.size > 0) {
-              console.log(
-                `[embed] ${existingEmbeddings.size} nodes already embedded — incremental run with content-hash comparison`,
-              );
-            }
-            await runEmbeddingPipeline(
-              executeQuery,
-              executeWithReusedStatement,
-              (p) => {
-                deps.embedJobManager.updateJob(job.id, {
-                  progress: {
-                    phase:
-                      p.phase === 'ready' ? 'complete' : p.phase === 'error' ? 'failed' : p.phase,
-                    percent: p.percent,
-                    message:
-                      p.phase === 'loading-model'
-                        ? 'Loading embedding model...'
-                        : p.phase === 'embedding'
-                          ? `Embedding nodes (${p.percent}%)...`
-                          : p.phase === 'indexing'
-                            ? 'Creating vector index...'
-                            : p.phase === 'ready'
-                              ? 'Embeddings complete'
-                              : `${p.phase} (${p.percent}%)`,
-                  },
-                });
-              },
-              {},
-              undefined,
-              undefined,
-              existingEmbeddings,
+          const repoName = entry.name;
+          const { runEmbeddingPipeline } =
+            await import('../../core/embeddings/embedding-pipeline.js');
+          const existingEmbeddings = await db.getCachedEmbeddingHashes(repoName);
+          if (existingEmbeddings && existingEmbeddings.size > 0) {
+            console.log(
+              `[embed] ${existingEmbeddings.size} nodes already embedded — incremental run with content-hash comparison`,
             );
+          }
 
-            await flushWAL();
-          });
+          const wrappedQuery = async (cypher: string) => db.executeQuery(repoName, cypher);
+          const wrappedBatch = async (cypher: string, paramsList: Array<Record<string, any>>) => {
+            await db.executeBatch(repoName, cypher, paramsList);
+          };
+
+          await runEmbeddingPipeline(
+            wrappedQuery,
+            wrappedBatch,
+            (p) => {
+              deps.embedJobManager.updateJob(job.id, {
+                progress: {
+                  phase:
+                    p.phase === 'ready' ? 'complete' : p.phase === 'error' ? 'failed' : p.phase,
+                  percent: p.percent,
+                  message:
+                    p.phase === 'loading-model'
+                      ? 'Loading embedding model...'
+                      : p.phase === 'embedding'
+                        ? `Embedding nodes (${p.percent}%)...`
+                        : p.phase === 'indexing'
+                          ? 'Creating vector index...'
+                          : p.phase === 'ready'
+                            ? 'Embeddings complete'
+                            : `${p.phase} (${p.percent}%)`,
+                },
+              });
+            },
+            {},
+            undefined,
+            undefined,
+            existingEmbeddings,
+          );
 
           clearTimeout(embedTimeout);
           releaseRepoLock(repoLockPath);

@@ -10,7 +10,8 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
 import { isIP } from 'net';
-import { logger } from '../core/logger.js';
+import { LoggerProviderRegistry } from '../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 /** Root directory for all cloned repositories. Targets must resolve inside this. */
 const CLONE_ROOT = path.resolve(path.join(os.homedir(), '.gitnexus', 'repos'));

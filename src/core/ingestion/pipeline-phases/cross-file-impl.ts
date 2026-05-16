@@ -18,12 +18,15 @@ import type { createResolutionContext } from '../model/resolution-context.js';
 import { createASTCache } from '../ast-cache.js';
 import { type PipelineProgress, getLanguageFromFilename } from 'gitnexus-shared';
 import { readFileContents } from '../filesystem-walker.js';
-import { isLanguageAvailable } from '../../tree-sitter/parser-loader.js';
+import { ParserProviderRegistry } from '../../tree-sitter/ParserProviderRegistry.js';
 import { topologicalLevelSort } from '../utils/graph-sort.js';
 import type { KnowledgeGraph } from '../../graph/types.js';
 import { isDev } from '../utils/env.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
+
+const parserProvider = ParserProviderRegistry.get();
 /** Max AST trees to keep in LRU cache for cross-file binding propagation. */
 const AST_CACHE_CAP = 50;
 
@@ -150,7 +153,7 @@ export async function runCrossFileBindingPropagation(
       if (!allPathSet.has(filePath)) continue;
 
       const lang = getLanguageFromFilename(filePath);
-      if (!lang || !isLanguageAvailable(lang)) continue;
+      if (!lang || !parserProvider.isLanguageAvailable(lang)) continue;
 
       levelCandidates.push({ filePath, seeded, importedReturns, importedRawReturns });
     }

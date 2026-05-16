@@ -5,7 +5,8 @@ import { createRouteLimiter, assertString, escapeRegExp } from '../validation.js
 import { statusFromError } from '../middleware/error-handler.js';
 import path from 'path';
 import fs from 'fs/promises';
-import { withLbugDb, executeQuery } from '../../core/lbug/lbug-adapter.js';
+import { createDatabaseProvider } from '../../core/config/database-config.js';
+const db = createDatabaseProvider();
 
 export const handleFileRequest = async (
   req: { query: any },
@@ -114,9 +115,8 @@ export function mountFile(router: Router, deps: ServerDependencies): void {
       const results: { filePath: string; line: number; text: string }[] = [];
       const repoRoot = path.resolve(entry.path);
 
-      const lbugPath = path.join(entry.storagePath, 'lbug');
-      const fileRows = await withLbugDb(lbugPath, () =>
-        executeQuery(`MATCH (n:File) WHERE n.content IS NOT NULL RETURN n.filePath AS filePath`),
+      const fileRows = await db.executeQuery(entry.name,
+        `MATCH (n:File) WHERE n.content IS NOT NULL RETURN n.filePath AS filePath`,
       );
 
       for (const row of fileRows) {

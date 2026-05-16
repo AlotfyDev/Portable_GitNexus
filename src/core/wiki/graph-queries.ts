@@ -5,7 +5,9 @@
  * Uses the MCP-style pooled lbug-adapter for connection management.
  */
 
-import { initLbug, executeQuery, closeLbug, touchRepo } from '../lbug/pool-adapter.js';
+import { DatabaseProviderRegistry } from '../storage/registry.js';
+
+const db = DatabaseProviderRegistry.getProvider('ladybug');
 
 const REPO_ID = '__wiki__';
 
@@ -13,7 +15,7 @@ const REPO_ID = '__wiki__';
  * Touch the wiki DB connection to prevent idle timeout during long LLM calls.
  */
 export function touchWikiDb(): void {
-  touchRepo(REPO_ID);
+  db.touchRepo(REPO_ID);
 }
 
 export interface FileWithExports {
@@ -45,21 +47,21 @@ export interface ProcessInfo {
  * Initialize the LadybugDB connection for wiki generation.
  */
 export async function initWikiDb(lbugPath: string): Promise<void> {
-  await initLbug(REPO_ID, lbugPath);
+  await db.initialize(REPO_ID, { connection: lbugPath });
 }
 
 /**
  * Close the LadybugDB connection.
  */
 export async function closeWikiDb(): Promise<void> {
-  await closeLbug(REPO_ID);
+  await db.close(REPO_ID);
 }
 
 /**
  * Get all source files with their exported symbol names and types.
  */
 export async function getFilesWithExports(): Promise<FileWithExports[]> {
-  const rows = await executeQuery(
+  const rows = await db.executeQuery(
     REPO_ID,
     `
     MATCH (f:File)-[:CodeRelation {type: 'DEFINES'}]->(n)
@@ -90,7 +92,7 @@ export async function getFilesWithExports(): Promise<FileWithExports[]> {
  * Get all files tracked in the graph (including those with no exports).
  */
 export async function getAllFiles(): Promise<string[]> {
-  const rows = await executeQuery(
+  const rows = await db.executeQuery(
     REPO_ID,
     `
     MATCH (f:File)
@@ -105,7 +107,7 @@ export async function getAllFiles(): Promise<string[]> {
  * Get inter-file call edges (calls between different files).
  */
 export async function getInterFileCallEdges(): Promise<CallEdge[]> {
-  const rows = await executeQuery(
+  const rows = await db.executeQuery(
     REPO_ID,
     `
     MATCH (a)-[:CodeRelation {type: 'CALLS'}]->(b)
@@ -130,7 +132,7 @@ export async function getIntraModuleCallEdges(filePaths: string[]): Promise<Call
   if (filePaths.length === 0) return [];
 
   const fileList = filePaths.map((f) => `'${f.replace(/'/g, "''")}'`).join(', ');
-  const rows = await executeQuery(
+  const rows = await db.executeQuery(
     REPO_ID,
     `
     MATCH (a)-[:CodeRelation {type: 'CALLS'}]->(b)
@@ -159,7 +161,7 @@ export async function getInterModuleCallEdges(filePaths: string[]): Promise<{
 
   const fileList = filePaths.map((f) => `'${f.replace(/'/g, "''")}'`).join(', ');
 
-  const outRows = await executeQuery(
+  const outRows = await db.executeQuery(
     REPO_ID,
     `
     MATCH (a)-[:CodeRelation {type: 'CALLS'}]->(b)
@@ -170,7 +172,7 @@ export async function getInterModuleCallEdges(filePaths: string[]): Promise<{
   `,
   );
 
-  const inRows = await executeQuery(
+  const inRows = await db.executeQuery(
     REPO_ID,
     `
     MATCH (a)-[:CodeRelation {type: 'CALLS'}]->(b)
@@ -207,7 +209,7 @@ export async function getProcessesForFiles(filePaths: string[], limit = 5): Prom
   const fileList = filePaths.map((f) => `'${f.replace(/'/g, "''")}'`).join(', ');
 
   // Find processes that have steps in the given files
-  const procRows = await executeQuery(
+  const procRows = await db.executeQuery(
     REPO_ID,
     `
     MATCH (s)-[r:CodeRelation {type: 'STEP_IN_PROCESS'}]->(p:Process)
@@ -227,7 +229,7 @@ export async function getProcessesForFiles(filePaths: string[], limit = 5): Prom
     const stepCount = row.stepCount || row[3] || 0;
 
     // Get the full step trace for this process
-    const stepRows = await executeQuery(
+    const stepRows = await db.executeQuery(
       REPO_ID,
       `
       MATCH (s)-[r:CodeRelation {type: 'STEP_IN_PROCESS'}]->(p:Process {id: '${procId.replace(/'/g, "''")}'})
@@ -257,7 +259,7 @@ export async function getProcessesForFiles(filePaths: string[], limit = 5): Prom
  * Get all processes in the graph (for overview page).
  */
 export async function getAllProcesses(limit = 20): Promise<ProcessInfo[]> {
-  const procRows = await executeQuery(
+  const procRows = await db.executeQuery(
     REPO_ID,
     `
     MATCH (p:Process)
@@ -275,7 +277,7 @@ export async function getAllProcesses(limit = 20): Promise<ProcessInfo[]> {
     const type = row.type || row[2] || 'unknown';
     const stepCount = row.stepCount || row[3] || 0;
 
-    const stepRows = await executeQuery(
+    const stepRows = await db.executeQuery(
       REPO_ID,
       `
       MATCH (s)-[r:CodeRelation {type: 'STEP_IN_PROCESS'}]->(p:Process {id: '${procId.replace(/'/g, "''")}'})

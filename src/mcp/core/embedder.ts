@@ -19,7 +19,8 @@ import {
 } from '../../core/embeddings/hf-env.js';
 import { silenceStdout, restoreStdout, realStderrWrite } from '../../core/lbug/pool-adapter.js';
 
-import { logger } from '../../core/logger.js';
+import { LoggerProviderRegistry } from '../../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 // Model config
 const MODEL_ID = 'Snowflake/snowflake-arctic-embed-xs';
 

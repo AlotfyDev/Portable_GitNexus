@@ -3,9 +3,10 @@ import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { getPortability } from '../core/portability/index.js';
-import { loadPortableConfig } from '../config/portable-config.js';
+import { ConfigProviderRegistry } from '../core/config/registry.js';
 import { createRouteLimiter } from './validation.js';
-import { logger } from '../core/logger.js';
+import { LoggerProviderRegistry } from '../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 export const SPA_FALLBACK_REGEX = /^(?!\/api(?:\/|$))(?!.*\.\w{1,10}$).*/;
 
@@ -14,7 +15,7 @@ export const resolveWebDistDir = async (): Promise<string | null> => {
 
   // Portable mode: resolve from config's web_ui.dist_dir
   if (portable.isPortable) {
-    const config = loadPortableConfig();
+    const config = ConfigProviderRegistry.get().getConfig();
     if (config.web_ui?.dist_dir) {
       const dir = path.resolve(portable.appDir, config.web_ui.dist_dir);
       try {

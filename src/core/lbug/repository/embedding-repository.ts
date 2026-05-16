@@ -6,8 +6,11 @@ import {
   STALE_HASH_SENTINEL,
   EMBEDDING_DIMS,
 } from '../schema.js';
-import { loadVectorExtension } from '../lbug-adapter.js';
-import { logger } from '../../logger.js';
+import { DatabaseProviderRegistry } from '../../storage/registry.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
+
+const db = DatabaseProviderRegistry.getProvider('ladybug');
 import {
   EMBEDDABLE_LABELS,
   LABEL_METHOD,
@@ -343,7 +346,7 @@ export class LadybugEmbeddingRepository implements EmbeddingRepository {
     if (this.vectorProvider) {
       return this.vectorProvider.health();
     }
-    const vectorReady = await loadVectorExtension();
+    const vectorReady = await db.loadVectorExtension('embedding-repo');
     return vectorReady;
   }
 
@@ -356,7 +359,7 @@ export class LadybugEmbeddingRepository implements EmbeddingRepository {
         return false;
       }
     }
-    const vectorReady = await loadVectorExtension();
+    const vectorReady = await db.loadVectorExtension('embedding-repo');
     if (!vectorReady) return false;
     try {
       await this.executeQuery(CREATE_VECTOR_INDEX_QUERY);

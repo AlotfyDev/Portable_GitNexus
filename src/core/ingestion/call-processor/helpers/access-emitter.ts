@@ -1,6 +1,6 @@
 import type { KnowledgeGraph } from '../../../graph/types.js';
 import type { OnFieldResolved } from '../types.js';
-import { generateId } from '../../../../lib/utils.js';
+import { generateId } from '../../utils/generate-id.js';
 
 export const makeAccessEmitter = (graph: KnowledgeGraph, sourceId: string): OnFieldResolved => {
   const emitted = new Set<string>();

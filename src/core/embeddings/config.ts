@@ -1,6 +1,6 @@
 import { defaultEmbeddingThreads } from '../platform/capabilities.js';
 import { DEFAULT_EMBEDDING_CONFIG, type EmbeddingConfig } from './types.js';
-import { loadPortableConfig } from '../../config/index.js';
+import { ConfigProviderRegistry } from '../config/registry.js';
 
 const parsePositiveInt = (name: string, value: string | undefined, fallback: number): number => {
   if (value === undefined) return fallback;
@@ -29,7 +29,7 @@ export const resolveEmbeddingConfig = (
   overrides: Partial<EmbeddingConfig> = {},
 ): EmbeddingConfig => {
   const env = process.env;
-  const yamlConfig = loadPortableConfig().embeddings;
+  const yamlConfig = ConfigProviderRegistry.get().getConfig().embeddings;
 
   return {
     ...DEFAULT_EMBEDDING_CONFIG,

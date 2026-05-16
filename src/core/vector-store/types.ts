@@ -37,9 +37,4 @@ export interface SearchOptions {
   filter?: Record<string, unknown>;
 }
 
-/** Statistics about the vector store */
-export interface VectorStoreStats {
-  totalVectors: number;
-  dimensions: number;
-  provider: string;
-}
+

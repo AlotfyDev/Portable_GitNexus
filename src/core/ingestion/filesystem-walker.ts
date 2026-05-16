@@ -1,11 +1,11 @@
 import { isVerboseIngestionEnabled } from './utils/verbose.js';
 import { DEFAULT_MAX_FILE_SIZE_BYTES, getMaxFileSizeBytes } from './utils/max-file-size.js';
-import fs from 'fs/promises';
-import path from 'path';
 import { glob } from 'glob';
 import { createIgnoreFilter } from '../../config/ignore-service.js';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+import { StorageProviderRegistry } from '../storage/StorageProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface FileEntry {
   path: string;
   content: string;
@@ -50,14 +50,13 @@ export const walkRepositoryPaths = async (
     const batch = filtered.slice(start, start + READ_CONCURRENCY);
     const results = await Promise.allSettled(
       batch.map(async (relativePath) => {
-        const fullPath = path.join(repoPath, relativePath);
-        const stat = await fs.stat(fullPath);
-        if (stat.size > maxFileSizeBytes) {
+        const s = await StorageProviderRegistry.get().stat(repoPath, relativePath);
+        if (s.size > maxFileSizeBytes) {
           skippedLarge++;
           skippedLargePaths.push(relativePath.replace(/\\/g, '/'));
           return null;
         }
-        return { path: relativePath.replace(/\\/g, '/'), size: stat.size };
+        return { path: relativePath.replace(/\\/g, '/'), size: s.size };
       }),
     );
 
@@ -100,8 +99,7 @@ export const readFileContents = async (
     const batch = relativePaths.slice(start, start + READ_CONCURRENCY);
     const results = await Promise.allSettled(
       batch.map(async (relativePath) => {
-        const fullPath = path.join(repoPath, relativePath);
-        const content = await fs.readFile(fullPath, 'utf-8');
+        const content = await StorageProviderRegistry.get().readFile(repoPath, relativePath);
         return { path: relativePath, content };
       }),
     );

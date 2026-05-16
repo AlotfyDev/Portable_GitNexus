@@ -20,7 +20,7 @@
  */
 
 import { KnowledgeGraph } from '../graph/types.js';
-import { generateId } from '../../lib/utils.js';
+import { generateId } from './utils/generate-id.js';
 import { SupportedLanguages } from 'gitnexus-shared';
 import { getProvider } from './languages/index.js';
 import { c3Linearize, gatherAncestors } from './model/resolve.js';

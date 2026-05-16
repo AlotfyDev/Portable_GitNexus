@@ -1,9 +1,7 @@
 import { Router } from 'express';
 import type { ServerDependencies } from '../types.js';
 import { createRepoResolver, requestedRepo } from '../middleware/repo-resolver.js';
-import path from 'path';
-import { withLbugDb, executeQuery } from '../../core/lbug/lbug-adapter.js';
-import { isWriteQuery } from '../../core/lbug/pool-adapter.js';
+import { isWriteQuery } from '../../core/query/helpers/constants.js';
 
 export function mountQuery(router: Router, deps: ServerDependencies): void {
   const resolveRepo = createRepoResolver(deps.backend, deps.jobManager, deps.config.repoHoldTimeoutMs);
@@ -26,8 +24,7 @@ export function mountQuery(router: Router, deps: ServerDependencies): void {
         res.status(404).json({ error: 'Repository not found' });
         return;
       }
-      const lbugPath = path.join(entry.storagePath, 'lbug');
-      const result = await withLbugDb(lbugPath, () => executeQuery(cypher));
+      const result = await deps.queryPipeline.cypher(entry.name, cypher);
       res.json({ result });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Query failed' });

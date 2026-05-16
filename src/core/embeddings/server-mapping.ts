@@ -29,9 +29,4 @@ export const readServerMapping = async (repoName: string): Promise<string | unde
   }
 };
 
-/**
- * Clear the cached mapping (useful for testing or after file changes)
- */
-export const clearServerMappingCache = (): void => {
-  cachedMapping = null;
-};
+

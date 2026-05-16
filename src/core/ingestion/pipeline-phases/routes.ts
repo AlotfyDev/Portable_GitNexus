@@ -28,11 +28,12 @@ import {
   compiledMatcherMatchesRoute,
 } from '../route-extractors/middleware.js';
 import { processNextjsFetchRoutes } from '../call-processor.js';
-import { generateId } from '../../../lib/utils.js';
+import { generateId } from '../utils/generate-id.js';
 import { readFileContents } from '../filesystem-walker.js';
 import { isDev } from '../utils/env.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 const EXPO_NAV_PATTERNS = [
   /router\.(push|replace|navigate)\(\s*['"`]([^'"`]+)['"`]/g,
   /<Link\s+[^>]*href=\s*['"`]([^'"`]+)['"`]/g,

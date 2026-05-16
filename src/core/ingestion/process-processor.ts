@@ -17,7 +17,8 @@ import { calculateEntryPointScore, isTestFile } from './entry-point-scoring.js';
 import { SupportedLanguages } from 'gitnexus-shared';
 import { isDev } from './utils/env.js';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 // ============================================================================
 // CONFIGURATION
 // ============================================================================

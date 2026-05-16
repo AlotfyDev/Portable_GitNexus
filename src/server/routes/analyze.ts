@@ -8,7 +8,8 @@ import { createRequire } from 'module';
 import { getStoragePath } from '../../storage/repo-manager.js';
 import { extractRepoName, getCloneDir, cloneOrPull } from '../git-clone.js';
 import { getPortability } from '../../core/portability/index.js';
-import { logger } from '../../core/logger.js';
+import { LoggerProviderRegistry } from '../../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { createRepoLockManager } from '../middleware/repo-resolver.js';
 import path from 'path';
 

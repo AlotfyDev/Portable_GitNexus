@@ -5,27 +5,33 @@
  * Provides MCP tool implementations using local .gitnexus/ indexes.
  */
 
-export { isWriteQuery } from '../../core/lbug/pool-adapter.js';
-export { isTestFilePath, VALID_NODE_LABELS, VALID_RELATION_TYPES, IMPACT_RELATION_CONFIDENCE } from './helpers/constants.js';
-export type { CodebaseContext } from './helpers/types.js';
+export { isWriteQuery } from '../../core/query/helpers/constants.js';
+export { isTestFilePath, VALID_NODE_LABELS, VALID_RELATION_TYPES, IMPACT_RELATION_CONFIDENCE } from '../../core/query/helpers/constants.js';
+export type { CodebaseContext } from '../../core/query/helpers/types.js';
 
-import type { RepoHandle } from './helpers/types.js';
-import { StateManager } from './helpers/state-manager.js';
-import { dispatchTool } from './helpers/tool-dispatch.js';
-import { executeCypher, formatCypherAsMarkdown } from './helpers/context-tools.js';
-import { executeImpactByUid } from './helpers/impact.js';
-import { queryClusters, queryProcesses, queryClusterDetail, queryProcessDetail } from './helpers/graph-queries.js';
-import { readGroupContractsResource, readGroupStatusResource } from './helpers/group.js';
+import type { RepoHandle } from '../../core/query/helpers/types.js';
+import type { QueryPipeline } from '../../core/query/QueryPipeline.js';
+import { StateManager } from '../../core/query/helpers/state-manager.js';
+import { dispatchTool } from '../../core/query/helpers/tool-dispatch.js';
+import { formatCypherAsMarkdown } from '../../core/query/helpers/context-tools.js';
+import { executeImpactByUid } from '../../core/query/helpers/impact.js';
+import { queryClusters, queryProcesses, queryClusterDetail, queryProcessDetail } from '../../core/query/helpers/graph-queries.js';
+import { readGroupContractsResource, readGroupStatusResource } from '../../core/query/helpers/group.js';
+import { createDatabaseProvider } from '../../core/config/database-config.js';
 
 export class LocalBackend {
   private ctx = new StateManager();
+  private pipeline!: QueryPipeline;
+  private dbProvider = createDatabaseProvider();
 
   async init(): Promise<boolean> {
+    const { QueryPipelineImpl } = await import('../../core/query/QueryPipelineImpl.js');
+    this.pipeline = new QueryPipelineImpl(this.dbProvider, this.ctx);
     return this.ctx.init();
   }
 
   async dispose(): Promise<void> {
-    await this.ctx.dispose();
+    await this.pipeline?.dispose();
   }
 
   async resolveRepo(repoParam?: string): Promise<RepoHandle> {
@@ -54,8 +60,7 @@ export class LocalBackend {
   }
 
   async executeCypher(repoName: string, query: string): Promise<any> {
-    const repo = await this.ctx.resolveRepo(repoName);
-    const raw = await executeCypher(repo, { query });
+    const raw = await this.pipeline.cypher(repoName, query);
     return formatCypherAsMarkdown(raw);
   }
 
@@ -108,19 +113,19 @@ export class LocalBackend {
   // ── Private: used by GroupToolPort callbacks ──
 
   private async impact(repo: RepoHandle, params: any): Promise<any> {
-    const { executeImpact } = await import('./helpers/impact.js');
+    const { executeImpact } = await import('../../core/query/helpers/impact.js');
     await this.ctx.ensureInitialized(repo.id);
     return executeImpact(repo, params);
   }
 
   private async query(repo: RepoHandle, params: any): Promise<any> {
-    const { executeQueryTool } = await import('./helpers/search.js');
+    const { executeQueryTool } = await import('../../core/query/helpers/search.js');
     await this.ctx.ensureInitialized(repo.id);
     return executeQueryTool(this.ctx, repo, params);
   }
 
   private async context(repo: RepoHandle, params: any): Promise<any> {
-    const { executeContext } = await import('./helpers/context-tools.js');
+    const { executeContext } = await import('../../core/query/helpers/context-tools.js');
     await this.ctx.ensureInitialized(repo.id);
     return executeContext(repo, params);
   }

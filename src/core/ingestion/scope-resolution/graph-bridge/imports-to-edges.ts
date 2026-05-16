@@ -15,7 +15,7 @@
 import type { ImportEdge, ScopeId } from 'gitnexus-shared';
 import type { KnowledgeGraph } from '../../../graph/types.js';
 import type { ScopeResolutionIndexes } from '../../model/scope-resolution-indexes.js';
-import { generateId } from '../../../../lib/utils.js';
+import { generateId } from '../../utils/generate-id.js';
 
 export function emitImportEdges(
   graph: KnowledgeGraph,

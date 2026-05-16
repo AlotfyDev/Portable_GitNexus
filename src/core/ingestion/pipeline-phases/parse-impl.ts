@@ -44,7 +44,7 @@ import { createResolutionContext } from '../model/resolution-context.js';
 import { ASTCache, createASTCache } from '../ast-cache.js';
 import { type PipelineProgress, getLanguageFromFilename } from 'gitnexus-shared';
 import { readFileContents } from '../filesystem-walker.js';
-import { isLanguageAvailable } from '../../tree-sitter/parser-loader.js';
+import { ParserProviderRegistry } from '../../tree-sitter/ParserProviderRegistry.js';
 import { createWorkerPool } from '../workers/worker-pool.js';
 import type { WorkerPool } from '../workers/worker-pool.js';
 import type {
@@ -70,7 +70,11 @@ import { getPortability } from '../../portability/index.js';
 import { synthesizeWildcardImportBindings, needsSynthesis } from './wildcard-synthesis.js';
 import { extractORMQueriesInline } from './orm-extraction.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
+
+const parserProvider = ParserProviderRegistry.get();
+
 // ── Constants ──────────────────────────────────────────────────────────────
 
 /** Max bytes of source content to load per parse chunk. */
@@ -126,14 +130,14 @@ export async function runChunkedParseAndResolve(
 
   const parseableScanned = scannedFiles.filter((f) => {
     const lang = getLanguageFromFilename(f.path);
-    return lang && isLanguageAvailable(lang);
+    return lang && parserProvider.isLanguageAvailable(lang);
   });
 
   // Warn about files skipped due to unavailable parsers
   const skippedByLang = new Map<string, number>();
   for (const f of scannedFiles) {
     const lang = getLanguageFromFilename(f.path);
-    if (lang && !isLanguageAvailable(lang)) {
+    if (lang && !parserProvider.isLanguageAvailable(lang)) {
       skippedByLang.set(lang, (skippedByLang.get(lang) || 0) + 1);
     }
   }

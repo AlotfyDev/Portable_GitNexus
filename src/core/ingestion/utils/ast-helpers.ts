@@ -1,10 +1,10 @@
-import type Parser from 'tree-sitter';
 import type { Capture, NodeLabel, Range } from 'gitnexus-shared';
 import type { LanguageProvider } from '../language-provider.js';
-import { generateId } from '../../../lib/utils.js';
+import type { ASTNode } from '../../tree-sitter/types.js';
+import { generateId } from './generate-id.js';
 
 /** Tree-sitter AST node. Re-exported for use across ingestion modules. */
-export type SyntaxNode = Parser.SyntaxNode;
+export type SyntaxNode = ASTNode;
 
 /**
  * Ordered list of definition capture keys for tree-sitter query matches.

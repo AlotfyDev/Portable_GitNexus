@@ -1,10 +1,8 @@
 import type { GraphNode, GraphRelationship, NodeLabel } from 'gitnexus-shared';
 import { KnowledgeGraph } from '../../../graph/types.js';
-import Parser from 'tree-sitter';
-import { Query as WtsQuery } from 'web-tree-sitter';
-import { loadParser, loadLanguage, isLanguageAvailable } from '../../../tree-sitter/parser-loader.js';
+import { ParserProviderRegistry } from '../../../tree-sitter/ParserProviderRegistry.js';
 import { getProvider } from '../../languages/index.js';
-import { generateId } from '../../../../lib/utils.js';
+import { generateId } from '../../utils/generate-id.js';
 import type { SymbolTableWriter, SymbolTableReader } from '../../model/index.js';
 import { ASTCache } from '../../ast-cache.js';
 import { getLanguageFromFilename, SupportedLanguages } from 'gitnexus-shared';
@@ -31,7 +29,8 @@ import {
   buildCollisionGroups,
 } from '../../utils/method-props.js';
 import type { LanguageProvider } from '../../language-provider.js';
-import { logger } from '../../../logger.js';
+import { LoggerProviderRegistry } from '../../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import {
   getTreeSitterContentByteLength,
   TREE_SITTER_MAX_BUFFER,
@@ -125,6 +124,9 @@ function seqGetFieldInfo(
   return cached;
 }
 
+// Shared parser provider instance
+const parserProvider = ParserProviderRegistry.get();
+
 const processParsingSequential = async (
   graph: KnowledgeGraph,
   files: { path: string; content: string }[],
@@ -133,7 +135,6 @@ const processParsingSequential = async (
   scopeTreeCache: ASTCache | undefined,
   onFileProgress?: FileProgressCallback,
 ) => {
-  const parser = await loadParser();
   const total = files.length;
   const logSkipped = isVerboseIngestionEnabled();
   const skippedByLang = logSkipped ? new Map<string, number>() : null;
@@ -154,7 +155,7 @@ const processParsingSequential = async (
     const language = getLanguageFromFilename(file.path);
 
     if (!language) continue;
-    if (!isLanguageAvailable(language)) {
+    if (!parserProvider.isLanguageAvailable(language)) {
       if (skippedByLang) {
         skippedByLang.set(language, (skippedByLang.get(language) ?? 0) + 1);
       }
@@ -177,46 +178,39 @@ const processParsingSequential = async (
     parseContent =
       getProvider(language).preprocessSource?.(parseContent, file.path) ?? parseContent;
 
+    let result;
     try {
-      await loadLanguage(language, file.path);
-    } catch {
-      continue;
-    }
-
-    let tree: Parser.Tree;
-    try {
-      tree = parser.parse(parseContent, undefined) as unknown as Parser.Tree;
+      result = await parserProvider.parse(parseContent, language, file.path);
     } catch (parseError) {
       logger.warn(`Skipping unparseable file: ${file.path}`);
       continue;
     }
 
-    astCache.set(file.path, tree);
+    astCache.set(file.path, result.internal);
 
-    const provider = getProvider(language);
-    if (provider.emitScopeCaptures !== undefined) {
-      scopeTreeCache?.set(file.path, tree);
+    const langProvider = getProvider(language);
+    if (langProvider.emitScopeCaptures !== undefined) {
+      scopeTreeCache?.set(file.path, result.internal);
     }
-    const queryString = provider.treeSitterQueries;
+    const queryString = langProvider.treeSitterQueries;
     if (!queryString) {
       continue;
     }
 
-    let query: Parser.Query;
-    let matches: Parser.QueryMatch[];
+    let query: ReturnType<typeof parserProvider.createQuery>;
+    let matches: any[];
     try {
-      const language = parser.language;
-      query = new WtsQuery(language, queryString) as unknown as Parser.Query;
-      matches = query.matches(tree.rootNode);
+      query = parserProvider.createQuery(language, queryString, file.path);
+      matches = query.matches(result.rootNode);
     } catch (queryError) {
       logger.warn({ queryError }, `Query error for ${file.path}:`);
       continue;
     }
 
-    const typeEnv = provider.fieldExtractor
-      ? buildTypeEnv(tree, language, {
-          enclosingFunctionFinder: provider.enclosingFunctionFinder,
-          extractFunctionName: provider.methodExtractor?.extractFunctionName,
+    const typeEnv = langProvider.fieldExtractor
+      ? buildTypeEnv(result.internal, language, {
+          enclosingFunctionFinder: langProvider.enclosingFunctionFinder,
+          extractFunctionName: langProvider.methodExtractor?.extractFunctionName,
         })
       : null;
 
@@ -229,13 +223,13 @@ const processParsingSequential = async (
 
       const definitionNodeForRange = getDefinitionNodeFromCaptures(captureMap);
       const definitionNode = getDefinitionNodeFromCaptures(captureMap);
-      const defaultNodeLabel = getLabelFromCaptures(captureMap, provider);
+      const defaultNodeLabel = getLabelFromCaptures(captureMap, langProvider);
       if (!defaultNodeLabel) return;
 
       const nameNode = captureMap['name'];
       const extractedClassSymbol =
-        definitionNode && provider.classExtractor?.isTypeDeclaration(definitionNode)
-          ? provider.classExtractor.extract(definitionNode, {
+        definitionNode && langProvider.classExtractor?.isTypeDeclaration(definitionNode)
+          ? langProvider.classExtractor.extract(definitionNode, {
               name: nameNode?.text,
               type: defaultNodeLabel,
             })
@@ -259,7 +253,7 @@ const processParsingSequential = async (
         ? cachedFindEnclosingClassInfo(
             nameNode || definitionNodeForRange,
             file.path,
-            provider.resolveEnclosingOwner,
+            langProvider.resolveEnclosingOwner,
           )
         : null;
       const enclosingClassId = enclosingClassInfo?.classId ?? null;
@@ -278,7 +272,7 @@ const processParsingSequential = async (
       if (isMethodLike && definitionNode) {
         let enriched = false;
 
-        if (provider.methodExtractor) {
+        if (langProvider.methodExtractor) {
           const methodOwnerNode = seqFindEnclosingOwnerNode(definitionNode);
           if (methodOwnerNode) {
             let result:
@@ -287,7 +281,7 @@ const processParsingSequential = async (
               | undefined = seqMethodExtractCache.get(methodOwnerNode.id);
             if (result === undefined) {
               result =
-                provider.methodExtractor.extract(methodOwnerNode, {
+                langProvider.methodExtractor.extract(methodOwnerNode, {
                   filePath: file.path,
                   language,
                 }) ?? null;
@@ -307,8 +301,8 @@ const processParsingSequential = async (
             }
           }
 
-          if (!enriched && provider.methodExtractor.extractFromNode) {
-            const info = provider.methodExtractor.extractFromNode(definitionNode, {
+          if (!enriched && langProvider.methodExtractor.extractFromNode) {
+            const info = langProvider.methodExtractor.extractFromNode(definitionNode, {
               filePath: file.path,
               language,
             });
@@ -354,8 +348,8 @@ const processParsingSequential = async (
       const classNodeForSymbol = definitionNodeForRange || definitionNode || nameNode;
       const qualifiedTypeName =
         extractedClassSymbol?.qualifiedName ??
-        (classNodeForSymbol && provider.classExtractor?.isTypeDeclaration(classNodeForSymbol)
-          ? (provider.classExtractor.extractQualifiedName(classNodeForSymbol, nodeName) ?? nodeName)
+        (classNodeForSymbol &&         langProvider.classExtractor?.isTypeDeclaration(classNodeForSymbol)
+          ? (langProvider.classExtractor.extractQualifiedName(classNodeForSymbol, nodeName) ?? nodeName)
           : undefined);
       const frameworkHint = definitionNode
         ? detectFrameworkFromAST(language, (definitionNode.text || '').slice(0, 300))
@@ -378,7 +372,7 @@ const processParsingSequential = async (
             language === SupportedLanguages.Vue && isVueSetup
               ? isVueSetupTopLevel(nameNode || definitionNodeForRange)
               : cachedExportCheck(
-                  provider.exportChecker,
+                  langProvider.exportChecker,
                   nameNode || definitionNodeForRange,
                   nodeName,
                 ),
@@ -400,13 +394,13 @@ const processParsingSequential = async (
       let seqIsStatic: boolean | undefined;
       let seqIsReadonly: boolean | undefined;
       if (nodeLabel === 'Property' && definitionNode) {
-        if (provider.fieldExtractor && typeEnv) {
+        if (langProvider.fieldExtractor && typeEnv) {
           const classNode = seqFindEnclosingOwnerNode(
             definitionNode,
-            provider.resolveEnclosingOwner,
+            langProvider.resolveEnclosingOwner,
           );
           if (classNode) {
-            const fieldMap = seqGetFieldInfo(classNode, provider, {
+            const fieldMap = seqGetFieldInfo(classNode, langProvider, {
               typeEnv,
               symbolTable: NOOP_SYMBOL_TABLE_SEQ,
               filePath: file.path,

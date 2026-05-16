@@ -11,7 +11,8 @@ import {
 } from '../lbug-config.js';
 import { runWithSessionLock, DB_LOCK_RETRY_ATTEMPTS, DB_LOCK_RETRY_DELAY_MS } from './session-lock.js';
 import { normalizeCopyPath } from './helpers/path-utils.js';
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 export let conn: lbug.Connection | null = null;
 export let db: lbug.Database | null = null;

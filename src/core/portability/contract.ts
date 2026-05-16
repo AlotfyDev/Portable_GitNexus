@@ -10,6 +10,7 @@ export interface PortabilityContract {
   readonly hasVectorExtension: boolean;
   readonly hasHttpEmbeddings: boolean;
   readonly hasOnnxRuntimeNode: boolean;
+  /** Declared but not consumed by any concrete stage. Reserved for future GPU pipeline. */
   readonly hasCuda: boolean;
   readonly appDir: string;
 }

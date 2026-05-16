@@ -2,7 +2,8 @@ import { conn } from './connection.js';
 import { getVectorExtensionLoaded, setVectorExtensionLoaded } from './connection.js';
 import { extensionManager, type ExtensionEnsureOptions } from '../extension-loader.js';
 import { isVectorExtensionSupportedByPlatform } from '../../platform/capabilities.js';
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 export const loadVectorExtension = async (
   targetConn?: import('@ladybugdb/core').Connection,

@@ -1,4 +1,3 @@
-import { Tree } from 'web-tree-sitter';
 import type { SyntaxNode } from '../../../utils/ast-helpers.js';
 import { extractStringContent, findDescendant } from '../../../utils/ast-helpers.js';
 import type { ExtractedRoute } from '../types.js';
@@ -239,7 +238,7 @@ function parseArrayGroupArgs(argsNode: SyntaxNode | null): RouteGroupContext {
   return ctx;
 }
 
-export function extractLaravelRoutes(tree: Tree, filePath: string): ExtractedRoute[] {
+export function extractLaravelRoutes(tree: unknown, filePath: string): ExtractedRoute[] {
   const routes: ExtractedRoute[] = [];
 
   function resolveStack(stack: RouteGroupContext[]): {
@@ -317,7 +316,7 @@ export function extractLaravelRoutes(tree: Tree, filePath: string): ExtractedRou
     groupSnapshot: RouteGroupContext[];
   }
 
-  const walkStack: WalkFrame[] = [{ node: tree.rootNode as unknown as SyntaxNode, groupSnapshot: [] }];
+  const walkStack: WalkFrame[] = [{ node: (tree as any).rootNode as unknown as SyntaxNode, groupSnapshot: [] }];
 
   while (walkStack.length > 0) {
     const { node, groupSnapshot } = walkStack.pop()!;

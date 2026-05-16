@@ -1,4 +1,4 @@
-import { generateId } from '../../../lib/utils.js';
+import { generateId } from '../utils/generate-id.js';
 import { SupportedLanguages } from 'gitnexus-shared';
 import type { KnowledgeGraph } from '../../graph/types.js';
 import type { CobolRegexResults } from '../cobol/cobol-preprocessor.js';

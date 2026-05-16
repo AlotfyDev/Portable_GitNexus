@@ -1,7 +1,9 @@
 import { IVecDBProvider } from './provider.js';
 import type { VectorStoreCapabilities, VectorRecord, SearchResult, SearchOptions } from './types.js';
 import { EMBEDDING_TABLE_NAME, EMBEDDING_INDEX_NAME, CREATE_VECTOR_INDEX_QUERY, STALE_HASH_SENTINEL } from '../lbug/schema.js';
-import { loadVectorExtension } from '../lbug/lbug-adapter.js';
+import { DatabaseProviderRegistry } from '../storage/registry.js';
+
+const db = DatabaseProviderRegistry.getProvider('ladybug');
 
 export class LadybugVectorProvider implements IVecDBProvider {
   readonly name = 'ladybug-vector';
@@ -95,7 +97,7 @@ export class LadybugVectorProvider implements IVecDBProvider {
   }
 
   private async ensureVectorIndex(): Promise<void> {
-    const vectorReady = await loadVectorExtension();
+    const vectorReady = await db.loadVectorExtension('ladybug-provider');
     if (!vectorReady) return;
     try {
       await this.executeQuery(CREATE_VECTOR_INDEX_QUERY);

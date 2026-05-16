@@ -5,11 +5,11 @@ import type { DispatchDecision, ReceiverEnriched } from '../call-types.js';
 import type { ExportedTypeMap } from './types.js';
 import { CLASS_LIKE_TYPES } from './constants.js';
 
-import Parser from 'tree-sitter';
+import { ParserProviderRegistry } from '../../tree-sitter/ParserProviderRegistry.js';
+import type { ParserQueryMatch } from '../../tree-sitter/index.js';
 import type { ResolutionContext } from '../model/resolution-context.js';
-import { isLanguageAvailable, loadParser, loadLanguage } from '../../tree-sitter/parser-loader.js';
 import { getProvider } from '../languages/index.js';
-import { generateId } from '../../../lib/utils.js';
+import { generateId } from '../utils/generate-id.js';
 import { getLanguageFromFilename, SupportedLanguages } from 'gitnexus-shared';
 import { isRegistryPrimary } from '../registry-primary-flag.js';
 import { isVerboseIngestionEnabled } from '../utils/verbose.js';
@@ -31,7 +31,8 @@ import type { BindingAccumulator } from '../binding-accumulator.js';
 import { extractTemplateComponents } from '../vue-sfc-extractor.js';
 import type { SyntaxNode } from '../utils/ast-helpers.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { enclosingFnExtractCache, findEnclosingFunction } from './helpers/enclosing-function.js';
 import { verifyConstructorBindings } from './helpers/constructor-verifier.js';
 import {
@@ -46,6 +47,8 @@ import { walkMixedChain } from './helpers/mixed-chain.js';
 import { makeAccessEmitter } from './helpers/access-emitter.js';
 import { collectExportedBindings } from './helpers/exported-types.js';
 import { defaultDispatchDecision } from './default-dispatch.js';
+
+const parserProvider = ParserProviderRegistry.get();
 
 /** Shorthand for the receiver-source discriminant shared across the DAG. */
 type ReceiverSource = ReceiverEnriched['receiverSource'];
@@ -69,7 +72,6 @@ export const processCalls = async (
   heritageMap?: import('../model/index.js').HeritageMap,
   bindingAccumulator?: BindingAccumulator,
 ): Promise<ExtractedHeritage[]> => {
-  const parser = await loadParser();
   const collectedHeritage: ExtractedHeritage[] = [];
   const pendingWrites: {
     receiverTypeName: string;
@@ -86,8 +88,8 @@ export const processCalls = async (
     file: { path: string; content: string };
     language: SupportedLanguages;
     provider: ReturnType<typeof getProvider>;
-    tree: ReturnType<typeof parser.parse>;
-    matches: ReturnType<Parser.Query['matches']>;
+    tree: unknown;
+    matches: ParserQueryMatch[];
     parentMap: ReadonlyMap<string, readonly string[]>;
     typeEnv: ReturnType<typeof buildTypeEnv>;
   }
@@ -100,7 +102,7 @@ export const processCalls = async (
     const language = getLanguageFromFilename(file.path);
     if (!language) continue;
     if (isRegistryPrimary(language)) continue;
-    if (!isLanguageAvailable(language)) {
+    if (!parserProvider.isLanguageAvailable(language)) {
       if (skippedByLang) {
         skippedByLang.set(language, (skippedByLang.get(language) ?? 0) + 1);
       }
@@ -111,24 +113,24 @@ export const processCalls = async (
     const queryStr = provider.treeSitterQueries;
     if (!queryStr) continue;
 
-    await loadLanguage(language, file.path);
+    await parserProvider.loadLanguage(language, file.path);
 
-    let tree: ReturnType<typeof parser.parse> | undefined = astCache.get(file.path) as unknown as ReturnType<typeof parser.parse> | undefined;
+    let tree: unknown = astCache.get(file.path);
     if (!tree) {
       const parseContent = provider.preprocessSource?.(file.content, file.path) ?? file.content;
       try {
-        tree = parser.parse(parseContent, undefined);
+        const result = await parserProvider.parse(parseContent, language, file.path);
+        tree = result.internal;
       } catch (parseError) {
         continue;
       }
-      astCache.set(file.path, tree as unknown as Parser.Tree);
+      astCache.set(file.path, tree as any);
     }
 
-    let matches;
+    let matches: ParserQueryMatch[];
     try {
-      const lang = parser.language;
-      const query = new Parser.Query(lang, queryStr);
-      matches = query.matches(tree.rootNode as unknown as Parameters<typeof query.matches>[0]);
+      const query = parserProvider.createQuery(language, queryStr);
+      matches = query.matches((tree as any).rootNode);
     } catch (queryError) {
       logger.warn({ queryError }, `Query error for ${file.path}:`);
       continue;

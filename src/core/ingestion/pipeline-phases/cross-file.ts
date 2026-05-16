@@ -36,7 +36,8 @@ import type { ParseOutput } from './parse.js';
 import { runCrossFileBindingPropagation } from './cross-file-impl.js';
 import { isDev } from '../utils/env.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface CrossFileOutput {
   /** Number of files re-processed during cross-file propagation. */
   filesReprocessed: number;

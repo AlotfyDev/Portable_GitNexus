@@ -7,6 +7,8 @@ import { registerGracefulShutdown } from './shutdown.js';
 import { registerWebUI, resolveWebDistDir } from './web-ui.js';
 import { mountMCPEndpoints } from './mcp-http.js';
 import { LocalBackend } from '../mcp/local/local-backend.js';
+import { QueryPipelineImpl } from '../core/query/QueryPipelineImpl.js';
+import { createDatabaseProvider } from '../core/config/database-config.js';
 import { JobManager } from './analyze-job.js';
 import { globalErrorHandler } from './middleware/error-handler.js';
 
@@ -24,11 +26,16 @@ export async function createServer(port: number, host: string = '127.0.0.1') {
   await backend.init();
   const cleanupMcp = mountMCPEndpoints(app, backend);
 
+  const dbProvider = createDatabaseProvider();
+  const queryPipeline = new QueryPipelineImpl(dbProvider, backend['ctx']);
+  await queryPipeline.init();
+
   const jobManager = new JobManager();
   const embedJobManager = new JobManager();
 
   const deps: ServerDependencies = {
     backend,
+    queryPipeline,
     jobManager,
     embedJobManager,
     activeRepoPaths: new Set<string>(),

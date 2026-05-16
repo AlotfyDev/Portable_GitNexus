@@ -7,7 +7,7 @@ import type { SymbolTableReader } from '../../../model/symbol-table.js';
 import type { SupportedLanguages, NodeLabel } from 'gitnexus-shared';
 import { getLanguageFromFilename } from 'gitnexus-shared';
 import { SupportedLanguages as SupportedLanguagesEnum } from 'gitnexus-shared';
-import { generateId } from '../../../../../lib/utils.js';
+import { generateId } from '../../../utils/generate-id.js';
 
 const classIdCache = new Map<SyntaxNode, EnclosingClassInfo | null>();
 const functionIdCache = new Map<SyntaxNode, string | null>();
@@ -68,7 +68,7 @@ export function findClassNodeByQualifiedName(node: SyntaxNode): SyntaxNode | nul
   if (!scope) return null;
   const className = scope.text;
 
-  const root = node.tree.rootNode;
+  const root = (node.tree as any).rootNode;
   const classTypes = new Set(['class_specifier', 'struct_specifier']);
   const searchIn = (parent: SyntaxNode): SyntaxNode | null => {
     for (let i = 0; i < parent.namedChildCount; i++) {

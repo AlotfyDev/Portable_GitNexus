@@ -2,7 +2,7 @@ export { pid } from './types.js';
 export type { PipelineId, ArtifactRecord, ArtifactFingerprint, ResourceDeclaration, ResourceCheckResult, PipelineContext, PreflightResult, PipelineContract, PipelineRunOptions, PipelineRunReport, PipelineRunner, CachePayload } from './types.js';
 export { createPipelineRunner } from './runner.js';
 
-export type { Device, IngestionOutput, LadybugStats, EmbeddingConfig, EmbeddingResult, EmbeddingCache, AnalysisMetadata, EmbeddingMode } from './stages.js';
+export type { Device, IngestionOutput, LadybugStats, EmbeddingResult } from './stages.js';
 
 export { STAGE_IDS, STAGE_DEPENDENCIES, STAGE_RESOURCES, STAGE_ARTIFACTS } from './descriptors.js';
 export type { ResourceRequirement, ArtifactDescriptor } from './descriptors.js';

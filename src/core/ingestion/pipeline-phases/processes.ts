@@ -16,10 +16,11 @@ import type { RoutesOutput } from './routes.js';
 import type { ToolsOutput } from './tools.js';
 import type { StructureOutput } from './structure.js';
 import { processProcesses, type ProcessDetectionResult } from '../process-processor.js';
-import { generateId } from '../../../lib/utils.js';
+import { generateId } from '../utils/generate-id.js';
 import { isDev } from '../utils/env.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface ProcessesOutput {
   processResult: ProcessDetectionResult;
 }

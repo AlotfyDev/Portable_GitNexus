@@ -18,7 +18,7 @@ import { KnowledgeGraph } from '../graph/types.js';
 import { ASTCache } from './ast-cache.js';
 import Parser from 'tree-sitter';
 import { isLanguageAvailable, loadParser, loadLanguage } from '../tree-sitter/parser-loader.js';
-import { generateId } from '../../lib/utils.js';
+import { generateId } from './utils/generate-id.js';
 import { getLanguageFromFilename, type NodeLabel, type SupportedLanguages } from 'gitnexus-shared';
 import { isVerboseIngestionEnabled } from './utils/verbose.js';
 import { yieldToEventLoop } from './utils/event-loop.js';
@@ -34,7 +34,8 @@ import type { ResolutionContext } from './model/resolution-context.js';
 import { TIER_CONFIDENCE } from './model/resolution-context.js';
 import type { HeritageInfo } from './heritage-types.js';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 /**
  * Derive the heritage-resolution strategy for a language from its
  * `LanguageProvider`. This is the production wiring that `buildHeritageMap`
@@ -238,7 +239,7 @@ export const processHeritage = async (
     try {
       const treeSitterLang = parser.language;
       query = new Parser.Query(treeSitterLang, queryStr);
-      matches = query.matches(tree.rootNode);
+      matches = query.matches((tree as any).rootNode);
     } catch (queryError) {
       logger.warn({ queryError }, `Heritage query error for ${file.path}:`);
       continue;
@@ -428,7 +429,7 @@ export async function extractExtractedHeritageFromFiles(
     try {
       const lang = parser.language;
       const query = new Parser.Query(lang, queryStr);
-      matches = query.matches(tree.rootNode);
+      matches = query.matches((tree as any).rootNode);
     } catch {
       continue;
     }

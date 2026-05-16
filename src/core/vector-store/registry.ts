@@ -3,7 +3,7 @@ import { LadybugVectorProvider } from './ladybug-provider.js';
 import type { IVecDBProvider } from './provider.js';
 import { LadybugEmbeddingRepository } from '../lbug/repository/embedding-repository.js';
 import type { EmbeddingRepository } from '../lbug/repository/embedding-repository.js';
-import { loadPortableConfig } from '../../config/portable-config.js';
+import { ConfigProviderRegistry } from '../config/registry.js';
 
 export type VectorDBBackend = 'icm' | 'ladybug' | 'postgres-pgvector' | 'chromadb' | 'lancedb' | 'faiss';
 
@@ -31,8 +31,11 @@ export function createVectorProviderForBackend(
   switch (backend) {
     case 'ladybug':
       return new LadybugVectorProvider(executeQuery, executeBatch);
-    case 'icm':
-      return undefined;
+    case 'icm': {
+      const config = ConfigProviderRegistry.get().getConfig();
+      const icmPath = config.vector_store?.icm?.binary_path ?? './third-party/icm/icm.exe';
+      return new IcmVectorProvider(icmPath);
+    }
     default:
       return undefined;
   }
@@ -42,7 +45,7 @@ export function createEmbeddingRepository(
   executeQuery: (cypher: string) => Promise<any[]>,
   executeBatch: (cypher: string, paramsList: Array<Record<string, any>>) => Promise<void>,
 ): EmbeddingRepository {
-  const config = loadPortableConfig();
+  const config = ConfigProviderRegistry.get().getConfig();
   const backend = config.vector_store?.backend ?? 'ladybug';
   const enabled = config.vector_store?.enabled;
 

@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { loadPortableConfig } from '../config/portable-config.js';
+import { ConfigProviderRegistry } from '../core/config/registry.js';
 import { getPortability } from '../core/portability/index.js';
 
 function getConfigPath(): string {
@@ -43,7 +43,7 @@ export const configCommand = async (action?: string, key?: string, value?: strin
   switch (action) {
     case 'view':
     case undefined: {
-      const config = loadPortableConfig();
+      const config = ConfigProviderRegistry.get().getConfig();
       console.log(yaml.dump(config as unknown as Record<string, unknown>, { indent: 2, noRefs: true, sortKeys: false }));
       break;
     }
@@ -54,7 +54,7 @@ export const configCommand = async (action?: string, key?: string, value?: strin
         process.exitCode = 1;
         return;
       }
-      const config = loadPortableConfig() as unknown as Record<string, unknown>;
+      const config = ConfigProviderRegistry.get().getConfig() as unknown as Record<string, unknown>;
       const pathParts = key.split('.');
       const val = deepGet(config, pathParts);
       if (val === undefined) {

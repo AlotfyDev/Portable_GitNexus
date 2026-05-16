@@ -28,7 +28,8 @@ import type { ParsedFile } from 'gitnexus-shared';
 import { extract as extractScope } from './scope-extractor.js';
 import type { LanguageProvider } from './language-provider.js';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 /** Callback used to report scope-extraction warnings to the host (worker or direct). */
 export type ScopeBridgeWarn = (message: string) => void;
 

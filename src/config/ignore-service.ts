@@ -2,7 +2,8 @@ import ignore, { type Ignore } from 'ignore';
 import fs from 'fs/promises';
 import nodePath from 'path';
 import type { Path } from 'path-scurry';
-import { logger } from '../core/logger.js';
+import { LoggerProviderRegistry } from '../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 const DEFAULT_IGNORE_LIST = new Set([
   // Version Control
@@ -336,7 +337,7 @@ export const shouldIgnorePath = (filePath: string): boolean => {
 };
 
 /** Check if a directory name is in the hardcoded ignore list */
-export const isHardcodedIgnoredDirectory = (name: string): boolean => {
+const isHardcodedIgnoredDirectory = (name: string): boolean => {
   return DEFAULT_IGNORE_LIST.has(name);
 };
 

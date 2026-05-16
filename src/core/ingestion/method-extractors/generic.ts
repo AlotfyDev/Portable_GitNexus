@@ -8,7 +8,8 @@
  */
 
 import type { SyntaxNode } from '../utils/ast-helpers.js';
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import type {
   MethodExtractor,
   MethodExtractorContext,

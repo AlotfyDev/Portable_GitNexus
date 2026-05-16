@@ -50,6 +50,8 @@ export interface AnalyzeOptions {
    * of a pipeline re-index.
    */
   allowDuplicateName?: boolean;
+  /** Override the config's output_path for where .gitnexus/ lives */
+  outputPath?: string;
 }
 
 export interface AnalyzeResult {

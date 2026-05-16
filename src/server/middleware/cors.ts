@@ -44,9 +44,4 @@ export const isAllowedOrigin = (origin: string | undefined): boolean => {
   return false;
 };
 
-export function corsMiddleware(config: ServerConfig) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    res.setHeader('Access-Control-Allow-Private-Network', config.pnaHeaderValue);
-    next();
-  };
-}
+

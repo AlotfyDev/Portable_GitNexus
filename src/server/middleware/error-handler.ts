@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { BadRequestError } from '../validation.js';
-import { logger } from '../../core/logger.js';
+import { LoggerProviderRegistry } from '../../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 export const statusFromError = (err: any): number => {
   if (err instanceof BadRequestError) return err.status;

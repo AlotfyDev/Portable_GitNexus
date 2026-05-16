@@ -27,7 +27,8 @@
  * data on stdout for piping (`gitnexus query | jq`). User banners on
  * stdout would corrupt that pipeline.
  */
-import { logger } from '../core/logger.js';
+import { LoggerProviderRegistry } from '../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 function writeStderr(msg: string): void {
   // Direct write — bypassing `console.*` so it cannot be intercepted by

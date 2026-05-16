@@ -10,7 +10,8 @@ import { readSafe } from './fs-utils.js';
 import { buildSuffixIndex, type SuffixIndex } from '../../ingestion/import-resolvers/utils.js';
 import { createIgnoreFilter } from '../../../config/ignore-service.js';
 import { getMaxFileSizeBytes } from '../../ingestion/utils/max-file-size.js';
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 /**
  * Cross-repo C/C++ `#include` dependency extractor.

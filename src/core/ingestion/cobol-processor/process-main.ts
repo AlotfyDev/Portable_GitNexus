@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { generateId } from '../../../lib/utils.js';
+import { generateId } from '../utils/generate-id.js';
 import type { KnowledgeGraph } from '../../graph/types.js';
 import { preprocessCobolSource, extractCobolSymbolsWithRegex } from '../cobol/cobol-preprocessor.js';
 import { expandCopies } from '../cobol/cobol-copy-expander.js';

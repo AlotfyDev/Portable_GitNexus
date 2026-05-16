@@ -11,9 +11,9 @@ import {
   type LbugConnectionHandle,
 } from '../lbug/lbug-config.js';
 import { dedupeContracts, dedupeCrossLinks } from './normalization.js';
-import { createLogger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
 
-const bridgeLogger = createLogger('bridge-db', { debugEnvVar: 'GITNEXUS_DEBUG_BRIDGE' });
+const bridgeLogger = LoggerProviderRegistry.child('bridge-db');
 
 /**
  * Sidecar files that LadybugDB creates next to a `bridge.lbug` file.

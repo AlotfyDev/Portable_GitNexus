@@ -1,10 +1,11 @@
-import fs from 'fs/promises';
 import path from 'path';
+import { StorageProviderRegistry } from '../storage/StorageProviderRegistry.js';
 import type { ImportConfigs } from './import-resolvers/types.js';
 
 import { isDev } from './utils/env.js';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 // ============================================================================
 // LANGUAGE-SPECIFIC CONFIG TYPES
 // ============================================================================
@@ -59,8 +60,7 @@ export async function loadTsconfigPaths(repoRoot: string): Promise<TsconfigPaths
 
   for (const filename of candidates) {
     try {
-      const tsconfigPath = path.join(repoRoot, filename);
-      const raw = await fs.readFile(tsconfigPath, 'utf-8');
+      const raw = await StorageProviderRegistry.get().readFile(repoRoot, filename);
       // Strip JSON comments (// and /* */ style) for robustness
       const stripped = raw.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
       const tsconfig = JSON.parse(stripped);
@@ -100,8 +100,7 @@ export async function loadTsconfigPaths(repoRoot: string): Promise<TsconfigPaths
  */
 export async function loadGoModulePath(repoRoot: string): Promise<GoModuleConfig | null> {
   try {
-    const goModPath = path.join(repoRoot, 'go.mod');
-    const content = await fs.readFile(goModPath, 'utf-8');
+    const content = await StorageProviderRegistry.get().readFile(repoRoot, 'go.mod');
     const match = content.match(/^module\s+(\S+)/m);
     if (match) {
       if (isDev) {
@@ -118,8 +117,7 @@ export async function loadGoModulePath(repoRoot: string): Promise<GoModuleConfig
 /** Parse composer.json to extract PSR-4 autoload mappings (including autoload-dev). */
 export async function loadComposerConfig(repoRoot: string): Promise<ComposerConfig | null> {
   try {
-    const composerPath = path.join(repoRoot, 'composer.json');
-    const raw = await fs.readFile(composerPath, 'utf-8');
+    const raw = await StorageProviderRegistry.get().readFile(repoRoot, 'composer.json');
     const composer = JSON.parse(raw);
     const psr4Raw = composer.autoload?.['psr-4'] ?? {};
     const psr4Dev = composer['autoload-dev']?.['psr-4'] ?? {};
@@ -148,39 +146,40 @@ export async function loadComposerConfig(repoRoot: string): Promise<ComposerConf
 export async function loadCSharpProjectConfig(repoRoot: string): Promise<CSharpProjectConfig[]> {
   const configs: CSharpProjectConfig[] = [];
   // BFS scan for .csproj files up to 5 levels deep, cap at 100 dirs to avoid runaway scanning
-  const scanQueue: { dir: string; depth: number }[] = [{ dir: repoRoot, depth: 0 }];
+  const scanQueue: { dirRelative: string; depth: number }[] = [{ dirRelative: '.', depth: 0 }];
   const maxDepth = 5;
   const maxDirs = 100;
   let dirsScanned = 0;
 
   while (scanQueue.length > 0 && dirsScanned < maxDirs) {
-    const { dir, depth } = scanQueue.shift()!;
+    const { dirRelative, depth } = scanQueue.shift()!;
     dirsScanned++;
     try {
-      const entries = await fs.readdir(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isDirectory() && depth < maxDepth) {
+      const entries = await StorageProviderRegistry.get().readdir(repoRoot, dirRelative);
+      for (const name of entries) {
+        const entryRel = path.join(dirRelative, name).replace(/\\/g, '/');
+        const s = await StorageProviderRegistry.get().stat(repoRoot, entryRel);
+        if (s.isDirectory && depth < maxDepth) {
           // Skip common non-project directories
           if (
-            entry.name === 'node_modules' ||
-            entry.name === '.git' ||
-            entry.name === 'bin' ||
-            entry.name === 'obj'
+            name === 'node_modules' ||
+            name === '.git' ||
+            name === 'bin' ||
+            name === 'obj'
           )
             continue;
-          scanQueue.push({ dir: path.join(dir, entry.name), depth: depth + 1 });
+          scanQueue.push({ dirRelative: entryRel, depth: depth + 1 });
         }
-        if (entry.isFile() && entry.name.endsWith('.csproj')) {
+        if (s.isFile && name.endsWith('.csproj')) {
           try {
-            const csprojPath = path.join(dir, entry.name);
-            const content = await fs.readFile(csprojPath, 'utf-8');
+            const content = await StorageProviderRegistry.get().readFile(repoRoot, entryRel);
             const nsMatch = content.match(/<RootNamespace>\s*([^<]+)\s*<\/RootNamespace>/);
-            const rootNamespace = nsMatch ? nsMatch[1].trim() : entry.name.replace(/\.csproj$/, '');
-            const projectDir = path.relative(repoRoot, dir).replace(/\\/g, '/');
+            const rootNamespace = nsMatch ? nsMatch[1].trim() : name.replace(/\.csproj$/, '');
+            const projectDir = dirRelative.replace(/\\/g, '/');
             configs.push({ rootNamespace, projectDir });
             if (isDev) {
               logger.info(
-                `📦 Loaded C# project: ${entry.name} (namespace: ${rootNamespace}, dir: ${projectDir})`,
+                `📦 Loaded C# project: ${name} (namespace: ${rootNamespace}, dir: ${projectDir})`,
               );
             }
           } catch {
@@ -204,11 +203,12 @@ export async function loadSwiftPackageConfig(repoRoot: string): Promise<SwiftPac
   const sourceDirs = ['Sources', 'Package/Sources', 'src'];
   for (const sourceDir of sourceDirs) {
     try {
-      const fullPath = path.join(repoRoot, sourceDir);
-      const entries = await fs.readdir(fullPath, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          targets.set(entry.name, sourceDir + '/' + entry.name);
+      const entries = await StorageProviderRegistry.get().readdir(repoRoot, sourceDir);
+      for (const name of entries) {
+        const relPath = sourceDir + '/' + name;
+        const s = await StorageProviderRegistry.get().stat(repoRoot, relPath);
+        if (s.isDirectory) {
+          targets.set(name, sourceDir + '/' + name);
         }
       }
     } catch {

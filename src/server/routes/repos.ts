@@ -3,7 +3,8 @@ import type { ServerDependencies } from '../types.js';
 import { createRepoResolver, requestedRepo, createRepoLockManager } from '../middleware/repo-resolver.js';
 import { createRouteLimiter } from '../validation.js';
 import { listRegisteredRepos, loadMeta, getStoragePath } from '../../storage/repo-manager.js';
-import { closeLbug } from '../../core/lbug/lbug-adapter.js';
+import { createDatabaseProvider } from '../../core/config/database-config.js';
+const db = createDatabaseProvider();
 import { getCloneDir } from '../git-clone.js';
 import path from 'path';
 import fs from 'fs/promises';
@@ -76,7 +77,7 @@ export function mountRepos(router: Router, deps: ServerDependencies): void {
 
       try {
         try {
-          await closeLbug();
+          await db.closeAll();
         } catch {}
 
         const storagePath = getStoragePath(entry.path);

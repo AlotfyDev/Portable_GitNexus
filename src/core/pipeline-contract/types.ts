@@ -1,5 +1,5 @@
 import type { AnalyzeOptions, AnalyzeCallbacks } from '../analyze/types.js';
-import type { PortableConfig } from '../../config/types.js';
+import type { ConfigProvider } from '../config/ConfigProvider.js';
 
 export type PipelineId = string & { readonly __pipeline: unique symbol };
 
@@ -40,7 +40,7 @@ export interface PipelineContext {
   callbacks: AnalyzeCallbacks;
   results: Map<PipelineId, unknown>;
   tempDir: string;
-  config?: PortableConfig;
+  config?: ConfigProvider;
   log: (msg: string) => void;
   progress: (phase: string, percent: number, message: string) => void;
 }

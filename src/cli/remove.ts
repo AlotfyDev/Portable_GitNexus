@@ -27,7 +27,8 @@
  */
 
 import fs from 'fs/promises';
-import { logger } from '../core/logger.js';
+import { LoggerProviderRegistry } from '../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { cliError } from './cli-message.js';
 import {
   readRegistry,

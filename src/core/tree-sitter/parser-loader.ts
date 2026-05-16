@@ -3,7 +3,8 @@ import { createRequire } from 'node:module';
 import { SupportedLanguages } from 'gitnexus-shared';
 import { DEV_APP_ROOT_URL } from '../../generated/constants.js';
 import { getPortability } from '../portability/index.js';
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { isWasmGrammarAvailable, loadWasmGrammar, initWasmRuntime } from './wasm-bridge.js';
 
 /**

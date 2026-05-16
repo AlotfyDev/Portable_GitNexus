@@ -3,9 +3,10 @@ import { KnowledgeGraph } from '../../../graph/types.js';
 import { ASTCache } from '../../ast-cache.js';
 import { getLanguageFromFilename } from 'gitnexus-shared';
 import type { SymbolTableWriter, ExtractedHeritage } from '../../model/index.js';
-import { generateId } from '../../../../lib/utils.js';
+import { generateId } from '../../utils/generate-id.js';
 import { WorkerPool } from '../../workers/worker-pool.js';
-import { logger } from '../../../logger.js';
+import { LoggerProviderRegistry } from '../../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import type {
   ParseWorkerResult,
   ParseWorkerInput,

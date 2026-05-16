@@ -10,7 +10,8 @@
 import { spawn, execSync } from 'child_process';
 import type { LLMResponse, CallLLMOptions } from './llm-client.js';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface CursorConfig {
   model?: string;
   workingDirectory?: string;

@@ -1,9 +1,10 @@
+/** @deprecated This module has zero consumers. Kept for reference. */
 import os from 'os';
 import { createRequire } from 'module';
 import { DEV_APP_ROOT_URL } from '../../generated/constants.js';
 import { getPortability } from '../portability/index.js';
 import { getVersion } from '../environment.js';
-import { loadPortableConfig } from '../../config/portable-config.js';
+import { ConfigProviderRegistry } from '../config/registry.js';
 
 let _require: ReturnType<typeof createRequire> | null = null;
 function getRequire(): ReturnType<typeof createRequire> {
@@ -74,7 +75,7 @@ export const getRuntimeFingerprint = (): RuntimeFingerprint => ({
 export const isVectorExtensionSupportedByPlatform = (
   platform: NodeJS.Platform = process.platform,
 ): boolean => {
-  const config = loadPortableConfig();
+  const config = ConfigProviderRegistry.get().getConfig();
   const setting = config.vector_store?.enabled ?? 'auto';
 
   if (setting === false) return false;

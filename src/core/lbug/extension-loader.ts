@@ -1,7 +1,8 @@
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'node:url';
 import { LBUG_MAX_DB_SIZE } from './lbug-config.js';
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { getPortability } from '../portability/index.js';
 
 const DEFAULT_EXTENSION_INSTALL_TIMEOUT_MS = 15_000;

@@ -4,7 +4,8 @@ import type { CypherExecutor } from '../contract-extractor.js';
 import type { GroupManifestLink, ContractRole } from '../types.js';
 import { shouldIgnorePath, loadIgnoreRules } from '../../../config/ignore-service.js';
 
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 interface GoModuleMeta {
   modulePath: string;
   groupPath: string;

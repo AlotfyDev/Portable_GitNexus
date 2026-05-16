@@ -1,3 +1,4 @@
+import path from 'path';
 import type { PipelineContract } from '../types.js';
 import type { EmbeddingResult } from '../stages.js';
 import { STAGE_IDS, STAGE_RESOURCES } from '../descriptors.js';
@@ -7,9 +8,11 @@ import {
   countEmbeddings,
   buildMeta,
 } from '../../analyze/finalizer.js';
-import { getLbugStats, executeQuery, closeLbug } from '../../lbug/lbug-adapter.js';
+import { createDatabaseProvider } from '../../config/database-config.js';
 import { loadMeta } from '../../../storage/repo-manager.js';
-import { getCurrentCommit } from '../../../storage/git.js';
+import { getCurrentCommit, getInferredRepoName, resolveRepoIdentityRoot } from '../../../storage/git.js';
+
+const db = createDatabaseProvider();
 
 export function createFinalizeStage(): PipelineContract<AnalyzeResult> {
   return {
@@ -28,8 +31,14 @@ export function createFinalizeStage(): PipelineContract<AnalyzeResult> {
     run: async (ctx) => {
       ctx.progress('done', 98, 'Saving metadata...');
 
-      const stats = await getLbugStats();
-      const embeddingCount = await countEmbeddings(executeQuery);
+      const repoName = ctx.options.registryName ??
+        getInferredRepoName(ctx.repoPath) ??
+        path.basename(resolveRepoIdentityRoot(ctx.repoPath));
+
+      const stats = await db.getStats(repoName);
+      const embeddingCount = await countEmbeddings(
+        (cypher: string) => db.executeQuery(repoName, cypher),
+      );
 
       const embResult = ctx.results.get(pid(STAGE_IDS.EMBEDDINGS)) as
         | EmbeddingResult
@@ -68,7 +77,7 @@ export function createFinalizeStage(): PipelineContract<AnalyzeResult> {
         embeddingCount,
       );
 
-      await closeLbug();
+      await db.closeAll();
       ctx.progress('done', 100, 'Done');
 
       return {

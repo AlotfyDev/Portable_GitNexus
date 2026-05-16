@@ -130,7 +130,7 @@ export function emitCsharpScopeCaptures(
     if (grouped['@reference.read.member'] !== undefined) {
       const anchor = grouped['@reference.read.member'];
       const memberNode = findNodeAtRange(tree.rootNode, anchor.range, 'member_access_expression');
-      if (memberNode === null || !shouldEmitReadMember(memberNode)) {
+      if (memberNode === null || !shouldEmitReadMember(memberNode as any)) {
         continue;
       }
     }
@@ -217,7 +217,7 @@ export function emitCsharpScopeCaptures(
         // disambiguation can narrow same-arity candidates by param
         // type. Non-literal arguments emit empty string to indicate
         // "unknown" — consumers treat unknown as any-match.
-        const argTypes = args.map((arg) => inferArgType(arg!));
+        const argTypes = args.map((arg) => inferArgType(arg! as any));
         grouped['@reference.parameter-types'] = syntheticCapture(
           '@reference.parameter-types',
           callNode,
@@ -244,7 +244,7 @@ export function emitCsharpScopeCaptures(
         findNodeAtRange(tree.rootNode, anchor.range, 'class_declaration') ??
         findNodeAtRange(tree.rootNode, anchor.range, 'record_declaration');
       if (typeNode !== null) {
-        const synth = synthesizePrimaryConstructor(typeNode);
+        const synth = synthesizePrimaryConstructor(typeNode as any);
         if (synth !== null) out.push(synth);
       }
     }

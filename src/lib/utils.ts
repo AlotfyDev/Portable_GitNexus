@@ -1,3 +1,1 @@
-export const generateId = (label: string, name: string): string => {
-  return `${label}:${name}`;
-};
+export { generateId } from '../core/ingestion/utils/generate-id.js';

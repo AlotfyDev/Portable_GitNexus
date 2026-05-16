@@ -1,7 +1,8 @@
 import { conn, ensuredFTSIndexes } from './connection.js';
 import { getFtsLoaded, setFtsLoaded } from './connection.js';
 import { extensionManager, type ExtensionEnsureOptions } from '../extension-loader.js';
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 const ftsIndexKey = (tableName: string, indexName: string): string => `${tableName}:${indexName}`;
 

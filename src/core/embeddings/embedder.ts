@@ -29,8 +29,11 @@ import { isHttpMode, getHttpDimensions, httpEmbed } from './http-client.js';
 import { resolveEmbeddingConfig } from './config.js';
 import { applyHfEnvOverrides, isHfDownloadFailure, withHfDownloadRetry } from './hf-env.js';
 import { selectProvider, type Device, type EmbeddingProvider } from './provider.js';
+import { DefaultModelRegistry } from './DefaultModelRegistry.js';
+import { HuggingFaceModelDownloader } from './HuggingFaceModelDownloader.js';
 import { getPortability } from '../portability/index.js';
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 /**
  * Check whether the onnxruntime-node package that @huggingface/transformers
@@ -313,8 +316,22 @@ export const initEmbedder = async (
   }
 
   if (!defaultEmbedder) {
-    const provider = selectProvider();
+    const registry = new DefaultModelRegistry();
+    const downloader = new HuggingFaceModelDownloader();
+    const modelConfig = registry.getDefault();
+
+    // Best-effort pre-download model before init
+    try {
+      await downloader.ensureModel(modelConfig);
+    } catch {
+      // Pre-download is best-effort — init() will download if needed
+    }
+
+    const provider = selectProvider(registry);
     const finalConfig = provider.overrideConfig(resolveEmbeddingConfig(config));
+    if (!finalConfig.dimensions) {
+      (finalConfig as EmbeddingConfig).dimensions = modelConfig.dimensions;
+    }
     defaultEmbedder = new Embedder(provider, finalConfig, onProgress, forceDevice);
   }
 

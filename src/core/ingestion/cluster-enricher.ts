@@ -7,7 +7,8 @@
 
 import { CommunityNode } from './community-processor.js';
 
-import { logger } from '../logger.js';
+import { LoggerProviderRegistry } from '../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 // ============================================================================
 // TYPES
 // ============================================================================

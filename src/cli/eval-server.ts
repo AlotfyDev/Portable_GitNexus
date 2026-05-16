@@ -27,7 +27,8 @@
 import http from 'http';
 import { writeSync } from 'node:fs';
 import { LocalBackend } from '../mcp/local/local-backend.js';
-import { logger } from '../core/logger.js';
+import { LoggerProviderRegistry } from '../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import { cliInfo, cliWarn } from './cli-message.js';
 
 export interface EvalServerOptions {

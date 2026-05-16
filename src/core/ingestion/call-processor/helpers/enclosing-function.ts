@@ -9,7 +9,7 @@ import {
 } from '../../utils/ast-helpers.js';
 import { typeTagForId, constTagForId, buildCollisionGroups } from '../../utils/method-props.js';
 import type { MethodInfo } from '../../method-types.js';
-import { generateId } from '../../../../lib/utils.js';
+import { generateId } from '../../utils/generate-id.js';
 import { getLanguageFromFilename } from 'gitnexus-shared';
 
 /** Cache for method extraction results in findEnclosingFunction fallback path. */

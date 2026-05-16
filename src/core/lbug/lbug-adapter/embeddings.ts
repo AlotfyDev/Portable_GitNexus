@@ -2,7 +2,8 @@ import { conn } from './connection.js';
 import { EMBEDDING_TABLE_NAME, STALE_HASH_SENTINEL } from '../schema.js';
 import { isMissingColumnOrTableError } from './fts.js';
 import type { CachedEmbedding } from '../../embeddings/types.js';
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 export const loadCachedEmbeddings = async (): Promise<{
   embeddingNodeIds: Set<string>;

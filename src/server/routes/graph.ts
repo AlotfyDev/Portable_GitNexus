@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import type { ServerDependencies } from '../types.js';
 import { createRepoResolver, requestedRepo } from '../middleware/repo-resolver.js';
-import path from 'path';
-import { withLbugDb, executeQuery } from '../../core/lbug/lbug-adapter.js';
 import {
   streamGraphNdjson,
   ClientDisconnectedError,
@@ -78,32 +76,6 @@ const mapGraphRelationshipRow = (row: any): GraphRelationship => ({
   step: row.step,
 });
 
-const buildGraph = async (
-  includeContent = false,
-): Promise<{ nodes: GraphNode[]; relationships: GraphRelationship[] }> => {
-  const nodes: GraphNode[] = [];
-  for (const table of NODE_TABLES) {
-    try {
-      const rows = await executeQuery(getNodeQuery(table, includeContent));
-      for (const row of rows) {
-        nodes.push(mapGraphNodeRow(table, row, includeContent));
-      }
-    } catch (err) {
-      if (!isIgnorableGraphQueryError(err)) {
-        throw err;
-      }
-    }
-  }
-
-  const relationships: GraphRelationship[] = [];
-  const relRows = await executeQuery(GRAPH_RELATIONSHIP_QUERY);
-  for (const row of relRows) {
-    relationships.push(mapGraphRelationshipRow(row));
-  }
-
-  return { nodes, relationships };
-};
-
 export function mountGraph(router: Router, deps: ServerDependencies): void {
   const resolveRepo = createRepoResolver(deps.backend, deps.jobManager, deps.config.repoHoldTimeoutMs);
 
@@ -114,7 +86,6 @@ export function mountGraph(router: Router, deps: ServerDependencies): void {
         res.status(404).json({ error: 'Repository not found' });
         return;
       }
-      const lbugPath = path.join(entry.storagePath, 'lbug');
       const includeContent = req.query.includeContent === 'true';
       const stream = req.query.stream === 'true';
 
@@ -139,9 +110,7 @@ export function mountGraph(router: Router, deps: ServerDependencies): void {
         res.once('close', abortStreaming);
 
         try {
-          await withLbugDb(lbugPath, async () =>
-            streamGraphNdjson(res, includeContent, abortController.signal),
-          );
+          await streamGraphNdjson(entry.name, res, includeContent, abortController.signal);
           if (!abortController.signal.aborted && !res.writableEnded) {
             res.end();
           }
@@ -153,7 +122,7 @@ export function mountGraph(router: Router, deps: ServerDependencies): void {
         return;
       }
 
-      const graph = await withLbugDb(lbugPath, async () => buildGraph(includeContent));
+      const graph = await deps.queryPipeline.getGraph(entry.name, { includeContent });
       res.json(graph);
     } catch (err: any) {
       if (err instanceof ClientDisconnectedError) {

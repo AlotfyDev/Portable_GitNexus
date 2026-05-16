@@ -1,7 +1,7 @@
-import { saveMeta, registerRepo, ensureGitNexusIgnored } from '../../storage/repo-manager.js';
-import { getRemoteUrl, hasGitDir } from '../../storage/git.js';
+import { StorageProviderRegistry } from '../storage/StorageProviderRegistry.js';
 import { generateAIContextFiles } from '../../cli/ai-context.js';
 import { EMBEDDING_TABLE_NAME } from '../lbug/schema.js';
+import { getPortability } from '../portability/index.js';
 import type { AnalyzeOptions } from './types.js';
 
 export interface FinalizeInput {
@@ -15,12 +15,6 @@ export interface FinalizeInput {
   embeddingCount: number;
   semanticMode: 'vector-index' | 'exact-scan' | undefined;
   existingMetaStats?: { files?: number; communities?: number; processes?: number } | null;
-}
-
-export interface FinalizeOutput {
-  projectName: string;
-  meta: any;
-  aggregatedClusterCount: number;
 }
 
 /**
@@ -62,17 +56,25 @@ export async function buildMeta(
 ): Promise<{ meta: any; projectName: string; aggregatedClusterCount: number }> {
   const { getRuntimeCapabilities } = await import('../platform/capabilities.js');
   const runtimeCapabilities = getRuntimeCapabilities();
+  const portability = getPortability();
 
   const effectiveSemanticMode =
     input.semanticMode ??
     (runtimeCapabilities.semanticMode === 'vector-index' ? 'vector-index' : 'exact-scan');
 
   const priorStats = input.existingMetaStats ?? {};
+
+  const capabilities: string[] = ['graph', 'fts'];
+  if (portability.hasLeidenAlgorithm) capabilities.push('leiden');
+  if (portability.hasVectorExtension) capabilities.push('vector-index');
+  if (portability.hasOnnxRuntimeNode || portability.hasHttpEmbeddings) capabilities.push('embeddings');
+
+  const storage = StorageProviderRegistry.get();
   const meta = {
     repoPath: input.repoPath,
     lastCommit: input.currentCommit,
     indexedAt: new Date().toISOString(),
-    remoteUrl: hasGitDir(input.repoPath) ? getRemoteUrl(input.repoPath) : undefined,
+    remoteUrl: storage.hasGitDir(input.repoPath) ? await storage.getRemoteUrl(input.repoPath) : undefined,
     stats: {
       files: input.pipelineResult?.totalFileCount ?? priorStats.files ?? 0,
       nodes: input.stats.nodes,
@@ -81,26 +83,29 @@ export async function buildMeta(
       processes: input.pipelineResult?.processResult?.stats.totalProcesses ?? priorStats.processes ?? 0,
       embeddings: embeddingCount,
     },
-    capabilities: {
-      graph: { provider: 'ladybugdb', status: runtimeCapabilities.graph },
-      fts: { provider: 'ladybugdb-fts', status: runtimeCapabilities.fts },
-      vectorSearch: {
-        provider: effectiveSemanticMode === 'vector-index' ? 'ladybugdb-vector' : 'exact-scan',
-        status: embeddingCount > 0 ? effectiveSemanticMode : 'unavailable',
-        exactScanLimit: runtimeCapabilities.exactScanLimit,
-        reason: runtimeCapabilities.reason,
+    capabilities,
+    artifacts: {
+      ingestion: {
+        fingerprint: input.currentCommit,
+        timestamp: Date.now(),
+        size: input.pipelineResult?.totalFileCount,
+      },
+      embeddings: {
+        fingerprint: input.currentCommit,
+        timestamp: Date.now(),
+        size: embeddingCount,
       },
     },
   };
 
-  await saveMeta(input.storagePath, meta);
+  await storage.saveMeta(input.storagePath, meta);
 
-  const projectName = await registerRepo(input.repoPath, meta, {
+  const projectName = await storage.registerRepo(input.repoPath, meta, {
     name: input.options.registryName,
     allowDuplicateName: input.options.allowDuplicateName,
   });
 
-  await ensureGitNexusIgnored(input.repoPath);
+  await storage.ensureGitNexusIgnored(input.repoPath);
 
   const aggregatedClusterCount = computeClusterSummary(input.pipelineResult);
 

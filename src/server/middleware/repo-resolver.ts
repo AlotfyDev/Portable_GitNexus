@@ -1,7 +1,8 @@
 import type { Request } from 'express';
 import type { LocalBackend } from '../../mcp/local/local-backend.js';
 import { listRegisteredRepos } from '../../storage/repo-manager.js';
-import { logger } from '../../core/logger.js';
+import { LoggerProviderRegistry } from '../../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 import path from 'path';
 
 export function createRepoResolver(

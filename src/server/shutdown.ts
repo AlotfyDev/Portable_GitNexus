@@ -1,7 +1,9 @@
 import type { Server } from 'http';
 import type { LocalBackend } from '../mcp/local/local-backend.js';
-import { closeLbug } from '../core/lbug/lbug-adapter.js';
-import { logger, flushLoggerSync } from '../core/logger.js';
+import { createDatabaseProvider } from '../core/config/database-config.js';
+const db = createDatabaseProvider();
+import { LoggerProviderRegistry } from '../core/config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 export interface ShutdownOptions {
   backend?: LocalBackend;
@@ -21,9 +23,9 @@ export function registerGracefulShutdown(
     options.jobManager?.dispose();
     options.embedJobManager?.dispose();
     await options.cleanupMcp?.();
-    await closeLbug();
+    await db.closeAll();
     await options.backend?.disconnect();
-    flushLoggerSync();
+    LoggerProviderRegistry.get().flush();
     process.exit(0);
   };
 
@@ -33,7 +35,7 @@ export function registerGracefulShutdown(
   let shuttingDown = false;
   process.on('uncaughtException', (err) => {
     logger.error({ err }, 'GitNexus uncaughtException');
-    flushLoggerSync();
+    LoggerProviderRegistry.get().flush();
     if (!shuttingDown) {
       shuttingDown = true;
       shutdown().catch(() => {});

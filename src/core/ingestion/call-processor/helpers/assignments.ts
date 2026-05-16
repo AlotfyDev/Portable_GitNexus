@@ -4,7 +4,7 @@ import type { ResolutionContext } from '../../model/resolution-context.js';
 import type { BindingAccumulator } from '../../binding-accumulator.js';
 import type { ReceiverTypeIndex } from '../types.js';
 import { CLASS_LIKE_TYPES } from '../constants.js';
-import { generateId } from '../../../../lib/utils.js';
+import { generateId } from '../../utils/generate-id.js';
 import { verifyConstructorBindings } from './constructor-verifier.js';
 import { extractFuncNameFromSourceId } from './resolve-call-target.js';
 import {

@@ -11,7 +11,8 @@ import type { BindingAccumulator, BindingEntry } from '../binding-accumulator.js
 import type { ReturnTypeLookup, ForLoopExtractorContext, PendingAssignment } from '../type-extractors/types.js';
 import type { SemanticModel } from '../model/index.js';
 import type { NodeLabel } from 'gitnexus-shared';
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 
 import type { TypeEnv, PatternOverrides, ConstructorBinding, BuildTypeEnvOptions, TypeEnvironment } from './types.js';
 import { FILE_SCOPE, SKIP_SUBTREE_TYPES } from './constants.js';

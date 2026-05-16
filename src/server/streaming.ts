@@ -1,9 +1,10 @@
 import type express from 'express';
 import type { JobManager } from './analyze-job.js';
 import { NODE_TABLES, type GraphNode, type GraphRelationship } from 'gitnexus-shared';
-import { streamQuery } from '../core/lbug/lbug-adapter.js';
+import { createDatabaseProvider } from '../core/config/database-config.js';
+const db = createDatabaseProvider();
 
-export type GraphStreamRecord =
+type GraphStreamRecord =
   | { type: 'node'; data: Record<string, unknown> }
   | { type: 'relationship'; data: Record<string, unknown> };
 
@@ -169,13 +170,15 @@ function mapGraphRelationshipRow(row: any): GraphRelationship {
 }
 
 export async function streamGraphNdjson(
+  repoName: string,
   res: express.Response,
   includeContent = false,
   signal?: AbortSignal,
 ): Promise<void> {
   for (const table of NODE_TABLES) {
     try {
-      await streamQuery(getNodeQuery(table, includeContent), async (row) => {
+      const rows = await db.executeQuery(repoName, getNodeQuery(table, includeContent));
+      for (const row of rows) {
         await writeNdjsonRecord(
           res,
           {
@@ -184,7 +187,7 @@ export async function streamGraphNdjson(
           },
           signal,
         );
-      });
+      }
     } catch (err) {
       if (!isIgnorableGraphQueryError(err)) {
         throw err;
@@ -192,7 +195,8 @@ export async function streamGraphNdjson(
     }
   }
 
-  await streamQuery(GRAPH_RELATIONSHIP_QUERY, async (row) => {
+  const rows = await db.executeQuery(repoName, GRAPH_RELATIONSHIP_QUERY);
+  for (const row of rows) {
     await writeNdjsonRecord(
       res,
       {
@@ -201,7 +205,7 @@ export async function streamGraphNdjson(
       },
       signal,
     );
-  });
+  }
 }
 
 export function mountSSEProgress(app: express.Express, routePath: string, jm: JobManager): void {

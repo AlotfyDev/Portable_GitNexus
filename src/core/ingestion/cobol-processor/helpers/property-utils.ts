@@ -1,4 +1,4 @@
-import { generateId } from '../../../../lib/utils.js';
+import { generateId } from '../../utils/generate-id.js';
 
 /** Generate a deterministic Property node ID using composite key (section:level:name). */
 function generatePropertyId(

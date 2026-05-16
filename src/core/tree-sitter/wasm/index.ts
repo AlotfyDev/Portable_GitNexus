@@ -33,14 +33,14 @@ export const grammarWasm: Record<string, string> = {
 /** Runtime WASM binary for web-tree-sitter. */
 export const runtimeWasm: string = WebTreeSitterWasm;
 
-export interface WasmGrammarEntry {
+interface WasmGrammarEntry {
   varName: string;
   exportName: string;
   pkg: string;
   sizeKB: string;
 }
 
-export const WASM_GRAMMAR_REGISTRY: WasmGrammarEntry[] = [
+const WASM_GRAMMAR_REGISTRY: WasmGrammarEntry[] = [
   {
     "varName": "WebTreeSitterWasm",
     "exportName": "web_tree_sitter",

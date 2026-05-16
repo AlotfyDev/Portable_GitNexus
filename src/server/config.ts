@@ -1,5 +1,3 @@
-import { loadPortableConfig } from '../config/index.js';
-
 export interface ServerConfig {
   readonly port: number;
   readonly host: string;
@@ -34,15 +32,4 @@ export const DEFAULT_SERVER_CONFIG: ServerConfig = {
   wasmGrammars: [],
 };
 
-export function loadConfig(overrides?: Partial<ServerConfig>): ServerConfig {
-  const portable = loadPortableConfig();
-  return {
-    ...DEFAULT_SERVER_CONFIG,
-    port: parseInt(process.env.PORT || String(portable.server.port), 10),
-    host: process.env.HOST || portable.server.host,
-    corsOrigins: portable.server.cors_origins,
-    webDistDir: portable.web_ui.dist_dir,
-    wasmGrammars: portable.wasm.grammars,
-    ...overrides,
-  };
-}
+

@@ -38,7 +38,8 @@ import { runScopeResolution } from './run.js';
 import { SCOPE_RESOLVERS } from './registry.js';
 import { isDev, isSemanticModelValidatorEnabled } from '../../utils/env.js';
 
-import { logger } from '../../../logger.js';
+import { LoggerProviderRegistry } from '../../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 export interface ScopeResolutionOutput {
   /** True when at least one language ran. */
   readonly ran: boolean;

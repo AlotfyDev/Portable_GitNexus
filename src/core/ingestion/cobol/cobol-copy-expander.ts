@@ -1,4 +1,5 @@
-import { logger } from '../../logger.js';
+import { LoggerProviderRegistry } from '../../config/LoggerProviderRegistry.js';
+const logger = LoggerProviderRegistry.get();
 /**
  * COBOL COPY statement expansion engine.
  *
